@@ -1,7 +1,11 @@
 # ETICN: An Efficient Traffic Image Compression Network
+Pytorch implementation of the paper "ETICN: An Efficient Traffic Image Compression Network". 
+This repository is based on [CompressAI](https://github.com/InterDigitalInc/CompressAI). We kept scripts for training and evaluation, and removed other components. The major changes are provided in `compressai/models`. For the official code release, see the [CompressAI](https://github.com/InterDigitalInc/CompressAI).
 
 ## About
-TODO
+This paper defines the eticn model for learned image compression in "An Efficient Traffic Image Compression Network".
+![eticn](assets/eticn_model.png)
+>  The architecture of eticn model.
 
 ## Installation
 Install CompressAI and the packages required for development.
@@ -34,7 +38,24 @@ TODO
 ## Result
 ### RD curves
 
-![Image](assets/R_D_s.png)
-![Image](assets/R_D.png)
+![psnr](assets/R_D_PSNR.png)
+![mssim](assets/R_D_MSSIM.png)
 
-TODO：
+>  RD curves on [camvid](https://www.kaggle.com/datasets/carlolepelaars/camvid)、[SODA10M](https://soda-2d.github.io/download.html)、[TRANS](TODO)
+
+### Visualization
+![visualization01](assets/vis_1.png)
+>  Visualization of the reconstructed image of example one.
+
+![visualization02](assets/vis_2.png)
+>  Visualization of the reconstructed image of example two.
+
+### Pretrained Models
+
+## Related links
+ * CompressAI: https://github.com/InterDigitalInc/CompressAI
+ * Swin-Transformer: https://github.com/microsoft/Swin-Transformer
+ * STF:https://github.com/Googolxx/STF
+ * camvid Images Dataset: https://www.kaggle.com/datasets/carlolepelaars/camvid
+ * SODA10M Images Dataset: https://soda-2d.github.io/download.html
+
