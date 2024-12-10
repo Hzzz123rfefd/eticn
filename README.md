@@ -1,6 +1,6 @@
 # ETICN: An Efficient Traffic Image Compression Network
 Pytorch implementation of the paper "ETICN: An Efficient Traffic Image Compression Network". 
-This repository is based on [CompressAI](https://github.com/InterDigitalInc/CompressAI). We kept scripts for training and evaluation, and removed other components. The major changes are provided in `compressai/models`. For the official code release, see the [CompressAI](https://github.com/InterDigitalInc/CompressAI).
+This repository is based on [CompressAI](https://github.com/InterDigitalInc/CompressAI). We kept some scripts, and removed other components. The major changes are provided in `compressai/models`. For the official code release, see the [CompressAI](https://github.com/InterDigitalInc/CompressAI).
 
 ## About
 This paper defines the eticn model for learned image compression in "An Efficient Traffic Image Compression Network".
