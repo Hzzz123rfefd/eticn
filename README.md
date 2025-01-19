@@ -28,7 +28,7 @@ TODO
 An examplary training script with a rate-distortion loss is provided in train.py.
 You can adjust the model parameters in cof/eticn.yml
 ```bash
-python train.py --model_config_path cof/eticn.yml
+python train.py --model_config_path config/eticn.yml
 ```
 
 ### Evaluation
