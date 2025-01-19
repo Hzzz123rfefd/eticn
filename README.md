@@ -15,7 +15,7 @@ conda activate ETICN
 pip install pybind11
 pip install compressai
 git clone https://gitee.com/Hz092811/cgvq-vae-compress.git
-cd stf
+cd eticn
 pip install -e .
 pip install -r requirement.txt
 ```
