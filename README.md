@@ -72,11 +72,11 @@ Pretrained models (optimized for MSE) trained from scratch using randomly chose 
 | Method | Lambda | Link                                                                                              |
 | ---- |--------|---------------------------------------------------------------------------------------------------|
 | ETICN | 0.0002 | [eticn_0002](https://pan.baidu.com/s/1zYa8pGu7SWgnBAFw6zMy2w?pwd=tr2x) |
-| ETICN | 0.0004 | [eticn_0004](https://drive.google.com/file/d/1OFzZoEaofNgsimBuOPHtgOJiGsR_RS-M/view?usp=sharing)    |
-| ETICN | 0.0009 | [eticn_0009](https://drive.google.com/file/d/1SjhqcKyP3SqVm4yhJQslJ6HgY1E8FcBL/view?usp=share_link) |
-| ETICN | 0.0016  | [eticn_0016](https://drive.google.com/file/d/1mupv4vcs8wpNdXCPclXghliikJyYjgj-/view?usp=share_link)  |
-| ETICN | 0.0036  | [eticn_0036](https://drive.google.com/file/d/1rsYgEYuqSYBIA4rfvAjXtVSrjXOzkJlB/view?usp=sharing)     |
-| ETICN | 0.0081 | [eticn_0081](https://drive.google.com/file/d/1cH5cR-0VdsQqCchyN3DO62Sx0WGjv1h8/view?usp=share_link) |
+| ETICN | 0.0004 | [eticn_0004](https://pan.baidu.com/s/12Ai_NHQGw-AfJdEMzZNOcA?pwd=gd8u)    |
+| ETICN | 0.0009 | [eticn_0009](https://pan.baidu.com/s/1dRoiXIlBsrlTBBojCW1_RA?pwd=n1ek) |
+| ETICN | 0.0016  | [eticn_0016](https://pan.baidu.com/s/1ctyCfyMiUYOMIYYlMFDW2g?pwd=hzwi)  |
+| ETICN | 0.0036  | [eticn_0036](https://pan.baidu.com/s/1ABlyniwVMIlekTfiUZLmiA?pwd=53fx)     |
+| ETICN | 0.0081 | [eticn_0081](https://pan.baidu.com/s/1RGYPJ_teGVrn0qGOEOKFpg?pwd=igay) |
 
 
 ## Related links
