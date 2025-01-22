@@ -417,12 +417,12 @@ class PatchEmbed(nn.Module):
         """Forward function."""
         B, C, H, W = x.size()
         if W % self.patch_size[1] != 0:
-            x = F.pad(x, (0, self.patch_size[1] - W % self.patch_size[1]))                    # W不是patch_size的倍数 填充为0
+            x = F.pad(x, (0, self.patch_size[1] - W % self.patch_size[1]))                    
         if H % self.patch_size[0] != 0:
-            x = F.pad(x, (0, 0, 0, self.patch_size[0] - H % self.patch_size[0]))             # H不是patch_size的倍数 填充为0
-        # embed
-        x = self.proj(x)  # B C Wh Ww
-        # norm
+            x = F.pad(x, (0, 0, 0, self.patch_size[0] - H % self.patch_size[0]))             
+
+        x = self.proj(x)  
+
         if self.norm is not None:
             Wh, Ww = x.size(2), x.size(3)
             x = x.flatten(2).transpose(1, 2)

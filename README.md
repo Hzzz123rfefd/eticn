@@ -22,7 +22,23 @@ pip install -r requirement.txt
 
 ## Usage
 ### Dataset
-TODO
+Firstly, you can download the Camvid dataset, [Camvid](https://www.kaggle.com/datasets/carlolepelaars/camvid),put them into `datasets/camvid`
+your directory structure should be:
+- eticn/
+  - datasets/
+    - camvid/
+      - test/
+      - test_labels/
+      - train/
+      - train_labels/
+      - val/
+      - val_labels/
+      - class_dict.csv
+
+Then, you can get the trainning data type using the following scripy:
+```bash
+python datasets/camvid/process.py --output_dir camvid_train
+```
 
 ### Trainning
 An examplary training script with a rate-distortion loss is provided in train.py.

@@ -30,8 +30,10 @@ class CompressionModel(nn.Module):
         self.lamda = lamda
         self.out_channel_m = out_channel_m
         self.out_channel_n = out_channel_n
-        self.entropy_bottleneck = EntropyBottleneck(out_channel_n)
-        self.gaussian_conditional = GaussianConditional(None)
+        self.device =  device if torch.cuda.is_available() else "cpu"
+        
+        self.entropy_bottleneck = EntropyBottleneck(out_channel_n).to(self.device)
+        self.gaussian_conditional = GaussianConditional(None).to(self.device)
 
     def forward(self,inputs):
         raise NotImplementedError("Subclasses should implement this method")
@@ -291,6 +293,7 @@ class ETICN(CompressionModel):
             (int)(self.image_shape[1]/patch_size/8),
             (int)(self.image_shape[2]/patch_size/8)
         ]
+        
         self.image_transform_encoder = Encoder(
             image_shape = self.image_shape,
             patch_size = self.patch_size,
@@ -299,7 +302,7 @@ class ETICN(CompressionModel):
             head_num = head_num,
             shift_size = shift_size,
             out_channel_m = self.out_channel_m
-        )
+        ).to(self.device)
 
         self.image_transform_decoder = Decoder(
             image_shape = self.image_shape,
@@ -309,18 +312,18 @@ class ETICN(CompressionModel):
             head_num=head_num,
             shift_size=shift_size,                                    
             out_channel_m= out_channel_m
-        )
+        ).to(self.device)
 
         self.tedm = TEDM(
             in_c = self.image_shape[0], 
             embed_dim = embedding_dim
-        )
+        ).to(self.device)
 
         self.hyperpriori_encoder = HyperprioriEncoder(
             feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
             out_channel_m = out_channel_m,
             out_channel_n = out_channel_n
-        )
+        ).to(self.device)
 
         self.side_context = nn.Sequential(
             deconv(out_channel_n, out_channel_m, kernel_size = 5,stride = 2),
@@ -328,14 +331,14 @@ class ETICN(CompressionModel):
             deconv(out_channel_m, out_channel_m * 3 // 2,kernel_size = 5,stride = 2),
             nn.LeakyReLU(inplace=True),
             conv(out_channel_m * 3 // 2, out_channel_m * 2, kernel_size=3,stride = 1)
-        )
+        ).to(self.device)
 
 
         self.universal_context = UniversalContext(
             out_channel_m = self.out_channel_m,
             codebook_size = self.codebook_size,
             group_num = self.group_num
-        )
+        ).to(self.device)
 
         self.local_context = MaskedConv2d(
             in_channels = out_channel_m , 
@@ -343,7 +346,7 @@ class ETICN(CompressionModel):
             kernel_size = 5, 
             padding = 2, 
             stride = 1
-        )
+        ).to(self.device)
 
         self.global_context = GlobalContext(
             head = transfomer_head ,
@@ -351,7 +354,7 @@ class ETICN(CompressionModel):
             d_model_1 = out_channel_m,
             d_model_2 = out_channel_m * 2,
             drop_prob = drop_prob
-            ) 
+        ).to(self.device)
         
         self.parm1 = nn.Sequential(
             nn.Conv2d(out_channel_m * 15 // 3,out_channel_m * 10 // 3, 1),
@@ -359,7 +362,7 @@ class ETICN(CompressionModel):
             nn.Conv2d(out_channel_m * 10 // 3, out_channel_m * 8 // 3, 1),
             nn.LeakyReLU(inplace=True),
             nn.Conv2d(out_channel_m * 8 // 3, out_channel_m * 6 // 3, 1),
-        )
+        ).to(self.device)
 
         self.parm2 = nn.Sequential(
             nn.Conv2d(out_channel_m * 15 // 3,out_channel_m * 10 // 3, 1),
@@ -367,10 +370,10 @@ class ETICN(CompressionModel):
             nn.Conv2d(out_channel_m * 10 // 3, out_channel_m * 8 // 3, 1),
             nn.LeakyReLU(inplace=True),
             nn.Conv2d(out_channel_m * 8 // 3, out_channel_m * 6 // 3, 1),
-        )  
+        ).to(self.device)
 
     def forward(self,inputs):
-            image = inputs["images"].to(self.device)
+            image = inputs["image"].to(self.device)
             """ get latent vector """
             y,mid_feather = self.image_transform_encoder(image)
 
@@ -426,7 +429,7 @@ class ETICN(CompressionModel):
                 mask: predict transport mask
             """
             output = {
-                "image":inputs["images"].to(self.device),
+                "image":inputs["image"].to(self.device),
                 "reconstruction_image":x_hat,
                 "feather":y_,
                 "zq":y_ba,

@@ -7,3 +7,5 @@ data
 imgs
 saved_model
 .DS_Store
+*.png
+*.pyd
