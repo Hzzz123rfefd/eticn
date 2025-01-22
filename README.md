@@ -14,7 +14,7 @@ conda create -n ETICN python=3.10
 conda activate ETICN
 pip install pybind11
 pip install compressai
-git clone https://gitee.com/Hz092811/cgvq-vae-compress.git
+git clone https://github.com/Hzzz123rfefd/eticn.git
 cd eticn
 pip install -e .
 pip install -r requirement.txt
@@ -41,8 +41,8 @@ python datasets/camvid/process.py --output_dir camvid_train
 ```
 
 ### Trainning
-An examplary training script with a rate-distortion loss is provided in train.py.
-You can adjust the model parameters in cof/eticn.yml
+An examplary training script with a rate-distortion loss is provided in `train.py`.
+You can adjust the model parameters in `config/eticn.yml`
 ```bash
 python train.py --model_config_path config/eticn.yml
 ```
@@ -67,7 +67,17 @@ TODO
 >  Visualization of the reconstructed image of example two.
 
 ### Pretrained Models
-TODO
+Pretrained models (optimized for MSE) trained from scratch using randomly chose 300k images from the Camvid dataset.
+
+| Method | Lambda | Link                                                                                              |
+| ---- |--------|---------------------------------------------------------------------------------------------------|
+| ETICN | 0.0002 | [eticn_0002](https://pan.baidu.com/s/1zYa8pGu7SWgnBAFw6zMy2w?pwd=tr2x) |
+| ETICN | 0.0004 | [eticn_0004](https://drive.google.com/file/d/1OFzZoEaofNgsimBuOPHtgOJiGsR_RS-M/view?usp=sharing)    |
+| ETICN | 0.0009 | [eticn_0009](https://drive.google.com/file/d/1SjhqcKyP3SqVm4yhJQslJ6HgY1E8FcBL/view?usp=share_link) |
+| ETICN | 0.0016  | [eticn_0016](https://drive.google.com/file/d/1mupv4vcs8wpNdXCPclXghliikJyYjgj-/view?usp=share_link)  |
+| ETICN | 0.0036  | [eticn_0036](https://drive.google.com/file/d/1rsYgEYuqSYBIA4rfvAjXtVSrjXOzkJlB/view?usp=sharing)     |
+| ETICN | 0.0081 | [eticn_0081](https://drive.google.com/file/d/1cH5cR-0VdsQqCchyN3DO62Sx0WGjv1h8/view?usp=share_link) |
+
 
 ## Related links
  * CompressAI: https://github.com/InterDigitalInc/CompressAI
