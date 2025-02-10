@@ -49,7 +49,9 @@ python train.py --model_config_path config/eticn.yml
 
 ### Evaluation
 you can evaluate a trained model on your own dataset, the evaluation script is:
-TODO
+```bash
+python example/eval.py --model_config_path config/eticn.yml --data_path camvid_train/train.jsonl --model_path saved_model/ --lamda 0.0002
+```
 
 ## Result
 ### RD curves
@@ -67,7 +69,7 @@ TODO
 >  Visualization of the reconstructed image of example two.
 
 ### Pretrained Models
-Pretrained models (optimized for MSE) trained from scratch using randomly chose 300k images from the Camvid dataset.
+Pretrained models (optimized for MSE) trained from scratch using  images from the Camvid dataset.
 
 | Method | Lambda | Link                                                                                              |
 | ---- |--------|---------------------------------------------------------------------------------------------------|

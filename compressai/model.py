@@ -669,3 +669,34 @@ class ETICN(CompressionModel):
         with open(trainning_log_path, "a") as file:
             file.write(str+"\n")
         return total_loss.avg
+    
+    def eval_model(
+        self,
+        epoch = None,
+        val_dataloader = None, 
+        log_path = None
+    ):
+        psnr = AverageMeter()
+        bpp = AverageMeter()
+        with torch.no_grad():
+            for batch_id,inputs in enumerate(val_dataloader):
+                b, c, h, w = inputs["image"].shape
+                output = self.forward(inputs)
+                bpp.update(
+                    sum(
+                        (torch.log(likelihoods).sum() / (-math.log(2) * b * h * w))
+                        for likelihoods in output["likelihoods"].values()
+                    )
+                )
+                for i in range(b):
+                    psnr.update(calculate_psnr(output["reconstruction_image"][i].cpu() * 255, inputs["image"][i].cpu() * 255))
+        
+        log_message = "Eval Epoch: {:d}, PSNR = {:.4f}, BPP = {:.2f}\n".format(epoch, psnr.avg, bpp.avg)
+        print(log_message)
+        if log_path != None:
+            with open(log_path, "a") as file:
+                file.write(log_message+"\n")
+        return log_message
+                
+
+        

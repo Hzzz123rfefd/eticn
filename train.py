@@ -1,13 +1,9 @@
 from torch.utils.data import DataLoader
 from compressai import models,datasets
+from compressai.utils import load_config
 
 import argparse
-import yaml
 
-def load_config(config_path):
-    with open(config_path, 'r') as file:
-        config = yaml.safe_load(file)
-    return config
 
 def main(args):
     config = load_config(args.model_config_path)
@@ -16,8 +12,8 @@ def main(args):
     net = models[config["model_type"]](**config["model"])
 
     """get data loader"""
-    train_datasets = datasets[config["dataset_type"]](**config["dataset"],data_type = "train")
-    test_datasets = datasets[config["dataset_type"]](**config["dataset"],data_type = "valid")
+    train_datasets = datasets[config["dataset_type"]](**config["dataset"], data_type = "train")
+    test_datasets = datasets[config["dataset_type"]](**config["dataset"], data_type = "valid")
 
     train_dataloader = DataLoader(
         train_datasets,

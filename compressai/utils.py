@@ -1,6 +1,13 @@
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data.dataloader import default_collate
+import yaml
+
+def load_config(config_path):
+    with open(config_path, 'r') as file:
+        config = yaml.safe_load(file)
+    return config
 
 def conv(in_channels, out_channels, kernel_size=5, stride=2):
     return nn.Conv2d(
@@ -64,3 +71,19 @@ def recursive_collate_fn(batch):
         return {key: recursive_collate_fn([b[key] for b in batch]) for key in batch[0]}
     else:
         return default_collate(batch)
+    
+
+
+def calculate_psnr(img1, img2):
+
+    assert img1.shape == img2.shape, "输入图像的形状必须相同"
+
+    img1 = img1.float()
+    img2 = img2.float()
+
+    mse = torch.mean((img1 - img2) ** 2)
+    if mse == 0:
+        return float('inf')  
+
+    psnr = 20 * torch.log10(255.0 / torch.sqrt(mse))
+    return psnr.item()
