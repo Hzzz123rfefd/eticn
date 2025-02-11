@@ -6,6 +6,7 @@ from tqdm import tqdm
 import os
 from torch import optim
 import numpy as np
+import cv2
 
 from compressai.entropy_models import *
 from compressai.utils import AverageMeter,clip_gradient
@@ -436,6 +437,7 @@ class ETICN(CompressionModel):
                 "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
                 "logits":logits,
                 "mask":mask,
+                "latent":y,
                 "labels":inputs["label"].long().to(self.device) if "label" in inputs else None
             }
             return output
@@ -697,6 +699,6 @@ class ETICN(CompressionModel):
             with open(log_path, "a") as file:
                 file.write(log_message+"\n")
         return log_message
-                
+
 
         
