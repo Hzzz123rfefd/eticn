@@ -1,5 +1,3 @@
-import os
-import re
 import cv2
 import datasets
 import numpy as np

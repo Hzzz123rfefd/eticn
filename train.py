@@ -40,7 +40,7 @@ def main(args):
         lr = config["traininng"]["learning_rate"],
         weight_decay = config["traininng"]["weight_decay"],
         total_epoch = config["traininng"]["epochs"],
-        save_checkpoint_step = config["logging"]["log_interval"],
+        eval_interval = config["logging"]["eval_interval"],
         save_model_dir = config["logging"]["save_dir"]
     )
 

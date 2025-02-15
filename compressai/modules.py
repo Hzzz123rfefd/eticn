@@ -292,3 +292,50 @@ class UniversalContext(nn.Module):
             vq.embedding.weight.data.copy_(parameters[index,:,:].to(device))
             vq.embedding.weight.requires_grad = requires_grad
             index = index + 1
+
+
+class ParameterEstimation(nn.Module):
+    def __init__(
+        self, 
+        latent_channel = 192, 
+        latent_width = 32, 
+        latent_heigh = 32, 
+    ):
+        super().__init__()
+        self.latent_channel = latent_channel
+        self.latent_width = latent_width
+        self.latent_heigh = latent_heigh
+        self.quality_emb1 = EmbedFC(input_dim = 1, emb_dim = self.latent_channel)
+        self.quality_emb2 = EmbedFC(input_dim = 1, emb_dim = self.latent_channel * 2)
+        
+        self.conv1 = nn.Conv2d(in_channels = self.latent_channel, out_channels = 2 * self.latent_channel, kernel_size = 3, stride = 1, padding = 1)
+        self.conv2 = nn.Conv2d(in_channels = self.latent_channel * 2, out_channels = 4 * self.latent_channel, kernel_size = 3, stride = 1, padding = 1)
+        self.conv3 = nn.Conv2d(in_channels = self.latent_channel * 4, out_channels = 2 * self.latent_channel, kernel_size = 3, stride = 1, padding = 1)
+        self.silu = nn.SiLU()
+        
+    def forward(self, latent, lamda):
+        lamda_emb1 = self.quality_emb1(lamda).view(-1, self.latent_channel, 1, 1)
+        lamda_emb2 = self.quality_emb2(lamda).view(-1, self.latent_channel * 2, 1, 1)
+        latent = self.silu(self.conv1(latent * lamda_emb1))
+        latent = self.silu(self.conv2(latent * lamda_emb2))
+        args = self.conv3(latent)
+        return args
+
+
+class EmbedFC(nn.Module):
+    def __init__(self, input_dim, emb_dim):
+        super(EmbedFC, self).__init__()
+        '''
+        generic one layer FC NN for embedding things  
+        '''
+        self.input_dim = input_dim
+        layers = [
+            nn.Linear(input_dim, emb_dim),
+            nn.GELU(),
+            nn.Linear(emb_dim, emb_dim),
+        ]
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = x.view(-1, self.input_dim)
+        return self.model(x)
