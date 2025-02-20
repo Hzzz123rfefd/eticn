@@ -339,3 +339,19 @@ class EmbedFC(nn.Module):
     def forward(self, x):
         x = x.view(-1, self.input_dim)
         return self.model(x)
+    
+class Gain(nn.Module):
+    def __init__(self):
+        super(Gain, self).__init__()
+        # 可学习矩阵 (192, 6)，每个通道有 6 个权重
+        self.transform_matrix = nn.Parameter(torch.randn(192, 6))  
+
+    def forward(self, x):
+        # x: (B, 192, 32, 32)
+        # 先扩展 transform_matrix 维度，使其变为 (1, 192, 6, 1, 1)
+        weight = self.transform_matrix.view(1, 192, 6, 1, 1)  # 方便进行广播
+        # 进行逐元素相乘 (B, 192, 1, 32, 32) * (1, 192, 6, 1, 1) -> (B, 192, 6, 32, 32)
+        x_transformed = x.unsqueeze(2) * weight  # (B, 192, 6, 32, 32)
+        # 调整维度为 (B, 6, 192, 32, 32)
+        x_transformed = x_transformed.permute(0, 2, 1, 3, 4)  
+        return x_transformed  # (B, 6, 192, 32, 32)

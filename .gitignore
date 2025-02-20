@@ -10,4 +10,5 @@ saved_model
 *.png
 *.pyd
 *.pth
+*.npy
 

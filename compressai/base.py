@@ -94,7 +94,7 @@ class ModelBase(nn.Module):
                         check_point_path
                     )
                     if epoch % eval_interval == 0:
-                        self.eval_epoch(epoch, val_dataloader, log_path)
+                        self.eval_epoch(val_dataloader, log_path)
                     
                     if is_best:
                         self.save_pretrained(save_model_dir)
@@ -172,7 +172,7 @@ class ModelBase(nn.Module):
         return total_loss.avg
     
     @abstractmethod
-    def eval_epoch(self, epoch, val_dataloader, log_path = None):
+    def eval_epoch(self, val_dataloader = None, log_path = None):
         pass
         
     @abstractmethod    
@@ -249,6 +249,5 @@ class ModelCompressionBase(ModelBase):
     def load_pretrained(self, save_model_dir):
         self.load_state_dict(torch.load(save_model_dir + "/model.pth"))
     
-    def save_pretrained(self,  save_model_dir):
-        lamda = self.lamda if lamda == None else lamda
+    def save_pretrained(self, save_model_dir):
         torch.save(self.state_dict(), save_model_dir + "/model.pth")
