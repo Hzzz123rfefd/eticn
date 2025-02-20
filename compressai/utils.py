@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data.dataloader import default_collate
 import yaml
+from torch import Tensor
 
 def load_config(config_path):
     with open(config_path, 'r') as file:
@@ -87,3 +88,10 @@ def calculate_psnr(img1, img2):
 
     psnr = 20 * torch.log10(255.0 / torch.sqrt(mse))
     return psnr.item()
+
+def lower_bound_bwd(x: Tensor, bound: Tensor, grad_output: Tensor):
+    pass_through_if = (x >= bound) | (grad_output < 0)
+    return pass_through_if * grad_output, None
+
+def lower_bound_fwd(x: Tensor, bound: Tensor) -> Tensor:
+    return torch.max(x, bound)

@@ -1,9 +1,11 @@
+import random
 from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
 import math
 import numpy as np
 
+from compressai.ops import ste_round
 from compressai.entropy_models import *
 from compressai.utils import AverageMeter,clip_gradient
 from compressai.modules import *
@@ -1298,3 +1300,180 @@ class ETICNVBR(ModelCompressionBase):
             "bpp": bpps
         }
         pass
+        
+class VICVBR(ModelCompressionBase):
+    """Self-attention model variant from `"Learned Image Compression with
+    Discretized Gaussian Mixture Likelihoods and Attention Modules"
+    <https://arxiv.org/abs/2001.01568>`_, by Zhengxue Cheng, Heming Sun, Masaru
+    Takeuchi, Jiro Katto.
+    Uses self-attention, residual blocks with small convolutions (3x3 and 1x1),
+    and sub-pixel convolutions for up-sampling.
+    Args:
+        N (int): Number of channels
+    """
+
+    def __init__(
+        self, 
+        image_channel = 3,
+        image_height = 512,
+        image_weight = 512,
+        out_channel_m= 192, 
+        out_channel_n = 128,
+        lamda = None,
+        finetune_model_dir = None,
+        stage = 1,
+        device = "cuda"
+    ):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
+        self.N = out_channel_n
+        self.M = out_channel_m
+        self.stage = stage
+
+        self.g_a = nn.Sequential(
+            conv(3, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.M, kernel_size=5, stride=2),
+        )
+
+        self.g_s = nn.Sequential(
+            deconv(self.M, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, 3, kernel_size=5, stride=2),
+        )
+
+        self.h_a = nn.Sequential(
+            conv(self.M, self.N, stride=1, kernel_size=3),
+            nn.LeakyReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+            nn.LeakyReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+        )
+
+        self.h_s = nn.Sequential(
+            deconv(self.N, self.M, stride=2, kernel_size=5),
+            nn.LeakyReLU(inplace=True),
+            deconv(self.M, self.M * 3 // 2, stride=2, kernel_size=5),
+            nn.LeakyReLU(inplace=True),
+            conv(self.M * 3 // 2, self.M * 2, stride=1, kernel_size=3),
+        )
+
+
+        self.entropy_parameters = nn.Sequential(
+            nn.Conv2d(self.M * 12 // 3, self.M * 10 // 3, 1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(self.M * 10 // 3, self.M * 8 // 3, 1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(self.M * 8 // 3, self.M * 6 // 3, 1),
+        )
+
+        self.context_prediction = MaskedConv2d(
+            self.M, 2 * self.M, kernel_size=5, padding=2, stride=1
+        )
+
+        self.gaussian_conditional = GaussianConditional(None)
+
+        self.quantizer = Quantizer()
+
+        self.lmbda = [0.0018, 0.0035, 0.0067, 0.0130, 0.025, 0.0483, 0.0932, 0.18]
+        self.Gain = torch.nn.Parameter(torch.tensor(
+            [1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]), requires_grad=True)
+        self.levels = len(self.lmbda)  # 8
+
+    @property
+    def downsampling_factor(self) -> int:
+        return 2 ** (4 + 2)
+
+    def forward(self, inputs, s = 1, is_train = True):
+        x = inputs["image"].to(self.device)
+        if is_train == True:
+            if self.stage > 1:
+                s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+            else:
+                s = self.levels - 1
+        
+        if self.stage > 1:
+            if s != 0:
+                scale = torch.max(self.Gain[s], torch.tensor(1e-4)) + 1e-9
+            else:
+                s = 0
+                scale = self.Gain[s].detach()
+        else:
+            scale = self.Gain[0].detach()
+
+        rescale = 1.0 / scale.clone().detach()
+
+        if self.stage <= 2:
+            y = self.g_a(x)
+            z = self.h_a(y)
+            z_hat, z_likelihoods = self.entropy_bottleneck(z)
+            params = self.h_s(z_hat)
+
+            y_hat = self.gaussian_conditional.quantize(y*scale, "noise" if self.training else "dequantize") * rescale
+            ctx_params = self.context_prediction(y_hat)
+            gaussian_params = self.entropy_parameters(
+                torch.cat((params, ctx_params), dim=1)
+            )
+            scales_hat, means_hat = gaussian_params.chunk(2, 1)
+            _, y_likelihoods = self.gaussian_conditional(y*scale - means_hat*scale, scales_hat*scale)
+            x_hat = self.g_s(y_hat)
+        else:
+            y = self.g_a(x)
+            z = self.h_a(y)
+            _, z_likelihoods = self.entropy_bottleneck(z)
+
+            z_offset = self.entropy_bottleneck._get_medians()
+            z_tmp = z - z_offset
+            z_hat = ste_round(z_tmp) + z_offset
+
+            params = self.h_s(z_hat)
+            kernel_size = 5  # context prediction kernel size
+            padding = (kernel_size - 1) // 2
+            y_hat = F.pad(y, (padding, padding, padding, padding))
+            y_hat, y_likelihoods = self._stequantization(y_hat, params, y.size(2), y.size(3), kernel_size, padding, scale, rescale)
+
+            x_hat = self.g_s(y_hat)
+
+        output = {
+                "image":inputs["image"].to(self.device),
+                "reconstruction_image":x_hat,
+                "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+                "lamda": self.lmbda[s]
+            }
+        return output
+
+    def _stequantization(self, y_hat, params, height, width, kernel_size, padding, scale, rescale):
+        y_likelihoods = torch.zeros([y_hat.size(0), y_hat.size(1), height, width]).to(scale.device)
+        # TODO: profile the calls to the bindings...
+        masked_weight = self.context_prediction.weight * self.context_prediction.mask
+        for h in range(height):
+            for w in range(width):
+                y_crop = y_hat[:, :, h: h + kernel_size, w: w + kernel_size].clone()
+                ctx_p = F.conv2d(
+                    y_crop,
+                    masked_weight,
+                    bias=self.context_prediction.bias,
+                )
+
+                # 1x1 conv for the entropy parameters prediction network, so
+                # we only keep the elements in the "center"
+                p = params[:, :, h: h + 1, w: w + 1]
+                gaussian_params = self.entropy_parameters(torch.cat((p, ctx_p), dim=1))
+                gaussian_params = gaussian_params.squeeze(3).squeeze(2)
+                scales_hat, means_hat = gaussian_params.chunk(2, 1)
+                y_crop = y_crop[:, :, padding, padding]
+                _, y_likelihoods[:, :, h: h + 1, w: w + 1] = self.gaussian_conditional(
+                    ((y_crop - means_hat) * scale).unsqueeze(2).unsqueeze(3),
+                    (scales_hat * scale).unsqueeze(2).unsqueeze(3))
+                y_q = self.quantizer.quantize((y_crop - means_hat.detach()) * scale,
+                                        "ste") * rescale + means_hat.detach()
+                y_hat[:, :, h + padding, w + padding] = y_q
+        y_hat = F.pad(y_hat, (-padding, -padding, -padding, -padding))
+        return y_hat, y_likelihoods

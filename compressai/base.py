@@ -212,6 +212,7 @@ class ModelCompressionBase(ModelBase):
         self.gaussian_conditional = GaussianConditional(None).to(self.device)
 
     def compute_loss(self, input):
+        lamda = input["lamda"]
         N, _, H, W = input["image"].size()
         output = {}
         num_pixels = N * H * W
@@ -221,7 +222,7 @@ class ModelCompressionBase(ModelBase):
             for likelihoods in input["likelihoods"].values()
         )
         output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"])
-        output["total_loss"] = self.lamda * output["bpp_loss"] + output["reconstruction_loss"]
+        output["total_loss"] = lamda * output["bpp_loss"] + output["reconstruction_loss"]
         return output
     
     def trainning(            
