@@ -981,7 +981,7 @@ class ETICNVBR(ModelCompressionBase):
         transfomer_head,
         transfomer_blocks,
         drop_prob = 0.1,
-        stage = 2,
+        stage = 1,
         lamda = None,
         sigma = 0.0001,
         beta = 0.0001,
@@ -1019,11 +1019,11 @@ class ETICNVBR(ModelCompressionBase):
             out_channel_m = self.out_channel_m
         ).to(self.device)
         
-        self.param_pre = ParameterEstimation(
-            latent_channel = self.out_channel_m, 
-            latent_width = (int)(self.image_weight / 16), 
-            latent_heigh = (int)(self.image_height / 16), 
-        ).to(self.device)
+        # self.param_pre = ParameterEstimation(
+        #     latent_channel = self.out_channel_m, 
+        #     latent_width = (int)(self.image_weight / 16), 
+        #     latent_heigh = (int)(self.image_height / 16), 
+        # ).to(self.device)
         
         self.gain = Gain().to(self.device)
 
@@ -1094,127 +1094,91 @@ class ETICNVBR(ModelCompressionBase):
             nn.LeakyReLU(inplace=True),
             nn.Conv2d(out_channel_m * 8 // 3, out_channel_m * 6 // 3, 1),
         ).to(self.device)
-    
-    def forward(self,inputs):
-            image = inputs["image"].to(self.device)
-            """ get latent vector """
-            y, mid_feather = self.image_transform_encoder(image)
-            
-            """ detect traffic element"""
-            logits, mask = self.tedm(image, mid_feather)
-            
-            """ get university message"""
-            y_ = y * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
-            universal_ctx, y_ba, code_index = self.universal_context(y_)
-            y_ba = y_ba * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
-            universal_ctx = universal_ctx * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
-            y_trnas = []
-            y_hats = []
-            
-            y_gain = self.gain(y)
-            for i in range(6):
-                y_tran = y_gain[:,i,:,:,:]
-                y_trnas.append(y_tran)
-                y_hats.append(self.gaussian_conditional.quantize(
-                    y_tran, "noise" if self.training else "dequantize"
-                ))
-            
-            # lamdas = torch.tensor([0.0002, 0.0004, 0.0009, 0.0016, 0.0036, 0.0081]).to(self.device)
-            # args = []
-            # for lamda in lamdas:
-            #     args.append(self.param_pre(y, lamda))
+        
+        self.lmbda = [0.0018, 0.0035, 0.0067, 0.0130, 0.025, 0.0483, 0.0932, 0.18]
+        self.levels = len(self.lmbda)
+        
+    def forward(self, inputs, s = 1, is_train = True):
+        image = inputs["image"].to(self.device)
+        if is_train == True:
+            if self.stage == 1:
+                s = self.levels - 1
+            else:
+                s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
 
-            # y_trnas = []
-            # y_hats = []
-            # for arg in args:
-            #     k, b = arg.chunk(2, 1)
-            #     y_tran = y * k + b
-            #     y_trnas.append(y_tran)
-            #     y_hats.append(self.gaussian_conditional.quantize(
-            #         y_tran, "noise" if self.training else "dequantize"
-            #     ))
-                
-            x_hats = [] 
-            all_likelihoods = []
-            
-            for y_tran, y_hat in zip(y_trnas, y_hats):
-                """ get side message """
-                z = self.hyperpriori_encoder(y_tran)
-                z_hat, z_likelihoods = self.entropy_bottleneck(z)
-                side_ctx = self.side_context(z_hat)
+        """ get latent vector """
+        y, mid_feather = self.image_transform_encoder(image)
+        
+        """ detect traffic element"""
+        logits, mask = self.tedm(image, mid_feather)
+        
+        """ get university message"""
+        y_ = y * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
+        universal_ctx, y_ba, code_index = self.universal_context(y_)
+        y_ba = y_ba * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
+        universal_ctx = universal_ctx * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
+        
+        y_gain = self.gain(y)
+        y_tran = y_gain[:,s,:,:,:]
+        y_hat = self.gaussian_conditional.quantize(
+            y_tran, "noise" if self.training else "dequantize"
+        )
 
-                """ get local message """
-                local_ctx = self.local_context(y_hat)
+        """ get side message """
+        z = self.hyperpriori_encoder(y_tran)
+        z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        side_ctx = self.side_context(z_hat)
 
-                """ get global message """
-                global_ctx = self.global_context(y_hat, local_ctx)
+        """ get local message """
+        local_ctx = self.local_context(y_hat)
 
-                """ parameters estimation"""
-                gaussian_params1 = self.parm1(
-                    torch.concat((local_ctx, global_ctx, side_ctx),dim=1)
-                )
-                
-                gaussian_params2 = self.parm2(
-                    torch.concat((local_ctx, universal_ctx, side_ctx),dim=1)
-                )
-                
-                scales_hat1, means_hat1 = gaussian_params1.chunk(2, 1)
-                scales_hat2, means_hat2 = gaussian_params2.chunk(2, 1)
-                scales_hat = scales_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + scales_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
-                means_hat = means_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + means_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
-                _,y_likelihoods = self.gaussian_conditional(y_tran, scales_hat, means_hat)
-                all_likelihoods.append({
-                    "y": y_likelihoods, "z": z_likelihoods
-                })
-                
-                """ inverse transformation"""
-                x_hat = self.image_transform_decoder(y_hat)
-                x_hat = torch.clamp(x_hat, 0, 1)
-                x_hats.append(x_hat)
+        """ get global message """
+        global_ctx = self.global_context(y_hat, local_ctx)
 
-            """ output """
-            """
-                reconstruction_image: reconstruction image
-                feather: transport feather to CGVQ
-                zq: re-feather
-                likelihoods: likelihoods of lather（y） and super prior latent（z）
-                logits: logits score of mask
-                mask: predict transport mask
-            """
-            output = {
-                "image":inputs["image"].to(self.device),
-                "reconstruction_image":x_hats,
-                "feather":y_,
-                "zq":y_ba,
-                "all_likelihoods": all_likelihoods,
-                "logits":logits,
-                "mask":mask,
-                "latent":y,
-                "labels":inputs["label"].long().to(self.device) if "label" in inputs else None
-            }
-            return output
+        """ parameters estimation"""
+        gaussian_params1 = self.parm1(
+            torch.concat((local_ctx, global_ctx, side_ctx),dim=1)
+        )
+        
+        gaussian_params2 = self.parm2(
+            torch.concat((local_ctx, universal_ctx, side_ctx),dim=1)
+        )
+        
+        scales_hat1, means_hat1 = gaussian_params1.chunk(2, 1)
+        scales_hat2, means_hat2 = gaussian_params2.chunk(2, 1)
+        scales_hat = scales_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + scales_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
+        means_hat = means_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + means_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
+        _,y_likelihoods = self.gaussian_conditional(y_tran, scales_hat, means_hat)
+        
+        """ inverse transformation"""
+        x_hat = self.image_transform_decoder(y_hat)
+        x_hat = torch.clamp(x_hat, 0, 1)
+
+        """ output """
+        """
+            reconstruction_image: reconstruction image
+            feather: transport feather to CGVQ
+            zq: re-feather
+            likelihoods: likelihoods of lather（y） and super prior latent（z）
+            logits: logits score of mask
+            mask: predict transport mask
+        """
+        output = {
+            "image":inputs["image"].to(self.device),
+            "reconstruction_image":x_hat,
+            "feather":y_,
+            "zq":y_ba,
+            "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+            "logits":logits,
+            "mask":mask,
+            "latent":y,
+            "labels":inputs["label"].long().to(self.device) if "label" in inputs else None,
+            "lamda": self.lmbda[s]
+        }
+        return output
 
     def compute_loss(self, input):
-        N, _, H, W = input["image"].size()
-        output = {}
-        num_pixels = N * H * W
-
-        lamdas = torch.tensor([0.0002, 0.0004, 0.0009, 0.0016, 0.0036, 0.0081]).to(self.device)
-        # lamdas = torch.tensor([0.05, 0.03, 0.007, 0.003, 0.001, 0.0003]).to(self.device)
-        bpp_losses = []
-        reconstruction_losses = []
-        for likelihoods in input["all_likelihoods"]:
-            bpp_losses.append(
-                sum(
-                    (torch.log(likelihood).sum() / (-math.log(2) * num_pixels))
-                    for likelihood in likelihoods.values()
-                )
-            )
-
-        for x_hat in input["reconstruction_image"]:
-            """ reconstruction loss """
-            reconstruction_losses.append(F.mse_loss(x_hat, input["image"]))
-
+        output = super().compute_loss(input)
         """ codebook loss """
         output["codebook_loss"] =  F.mse_loss(input["zq"].detach(), input["feather"]) + 0.25 * F.mse_loss(input["zq"], input["feather"].detach())
 
@@ -1222,20 +1186,7 @@ class ETICNVBR(ModelCompressionBase):
         true_labels = input["labels"]
         pre_labels = F.interpolate(input["logits"], scale_factor=16, mode='bicubic', align_corners=True)
         output["mask_loss"] = F.cross_entropy(pre_labels, true_labels)
-
-        # """ recall """
-        # pre = torch.argmax(pre_labels, dim=1)
-        # TP = torch.sum((pre == 0) & (true_labels == 0))
-        # FN = torch.sum((pre == 1) & (true_labels == 0))
-        # if TP + FN == 0:
-        #     out["recall"] = 0.5
-        # else:
-        #     out["recall"] = TP.float() / (TP + FN).float()
-
-        """ all loss """
-        output["total_loss"] = torch.Tensor([0]).to(self.device)
-        for index, lamda in enumerate(lamdas):
-            output["total_loss"]  = output["total_loss"] + bpp_losses[index] +  lamda * reconstruction_losses[index]
+        
         output["total_loss"] =  output["total_loss"] + self.sigma * output["codebook_loss"] + self.beta * output["mask_loss"]
         return output
 
@@ -1263,43 +1214,42 @@ class ETICNVBR(ModelCompressionBase):
                 
             super().trainning(train_dataloader, test_dataloader, val_dataloader, optimizer_name, weight_decay, clip_max_norm, factor, patience, lr, total_epoch, eval_interval, save_model_dir)
 
-    def eval_epoch(
-        self,
-        val_dataloader = None, 
-        log_path = None
-    ):
-        lamdas = [0.0002, 0.0004, 0.0009, 0.0016, 0.0036, 0.0081]
-        psnrs = [AverageMeter() for i in lamdas]
-        bpps = [AverageMeter() for i in lamdas]
-        with torch.no_grad():
-            for batch_id, inputs in enumerate(val_dataloader):
-                b, c, h, w = inputs["image"].shape
-                output = self.forward(inputs)
-                for index, (x_hat, likelihoodss) in enumerate(zip(output["reconstruction_image"], output["all_likelihoods"])):
-                    bpps[index].update(
-                        sum(
-                            (torch.log(likelihoods).sum() / (-math.log(2) * b * h * w))
-                            for likelihoods in likelihoodss.values()
-                        )
-                    )
-                    for i in range(b):
-                        psnrs[index].update(calculate_psnr(x_hat[i].cpu() * 255, inputs["image"][i].cpu() * 255))
+    # def eval_epoch(
+    #     self,
+    #     val_dataloader = None, 
+    #     log_path = None
+    # ):
+    #     lamdas = [0.0002, 0.0004, 0.0009, 0.0016, 0.0036, 0.0081]
+    #     psnrs = [AverageMeter() for i in lamdas]
+    #     bpps = [AverageMeter() for i in lamdas]
+    #     with torch.no_grad():
+    #         for batch_id, inputs in enumerate(val_dataloader):
+    #             b, c, h, w = inputs["image"].shape
+    #             output = self.forward(inputs)
+    #             for index, (x_hat, likelihoodss) in enumerate(zip(output["reconstruction_image"], output["all_likelihoods"])):
+    #                 bpps[index].update(
+    #                     sum(
+    #                         (torch.log(likelihoods).sum() / (-math.log(2) * b * h * w))
+    #                         for likelihoods in likelihoodss.values()
+    #                     )
+    #                 )
+    #                 for i in range(b):
+    #                     psnrs[index].update(calculate_psnr(x_hat[i].cpu() * 255, inputs["image"][i].cpu() * 255))
 
-        log_message = ""
-        for index, lamda in enumerate(lamdas):
-            log_message = log_message + f"lamda = {lamda}, PSNR = {psnrs[index].avg}, BPP = {bpps[index].avg}\n"
+    #     log_message = ""
+    #     for index, lamda in enumerate(lamdas):
+    #         log_message = log_message + f"lamda = {lamda}, PSNR = {psnrs[index].avg}, BPP = {bpps[index].avg}\n"
             
-        print(log_message)
-        if log_path != None:
-            with open(log_path, "a") as file:
-                file.write(log_message+"\n")
+    #     print(log_message)
+    #     if log_path != None:
+    #         with open(log_path, "a") as file:
+    #             file.write(log_message+"\n")
                 
-        output = {
-            "log_message":log_message,
-            "PSNR": psnrs,
-            "bpp": bpps
-        }
-        pass
+    #     output = {
+    #         "log_message":log_message,
+    #         "PSNR": psnrs,
+    #         "bpp": bpps
+    #     }
         
 class VICVBR(ModelCompressionBase):
     """Self-attention model variant from `"Learned Image Compression with
@@ -1318,7 +1268,7 @@ class VICVBR(ModelCompressionBase):
         image_height = 512,
         image_weight = 512,
         out_channel_m= 192, 
-        out_channel_n = 128,
+        out_channel_n = 192,
         lamda = None,
         finetune_model_dir = None,
         stage = 1,
@@ -1381,8 +1331,9 @@ class VICVBR(ModelCompressionBase):
         self.gaussian_conditional = GaussianConditional(None)
 
         self.quantizer = Quantizer()
-
+        
         self.lmbda = [0.0018, 0.0035, 0.0067, 0.0130, 0.025, 0.0483, 0.0932, 0.18]
+        # self.lmbda = [0.0002, 0.0004, 0.0009, 0.0016, 0.0036, 0.0081]
         self.Gain = torch.nn.Parameter(torch.tensor(
             [1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]), requires_grad=True)
         self.levels = len(self.lmbda)  # 8
@@ -1396,18 +1347,15 @@ class VICVBR(ModelCompressionBase):
         if is_train == True:
             if self.stage > 1:
                 s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+                if s != 0:
+                    scale = torch.max(self.Gain[s], torch.tensor(1e-4)) + 1e-9
+                else:
+                    scale = self.Gain[s].detach()
             else:
                 s = self.levels - 1
-        
-        if self.stage > 1:
-            if s != 0:
-                scale = torch.max(self.Gain[s], torch.tensor(1e-4)) + 1e-9
-            else:
-                s = 0
-                scale = self.Gain[s].detach()
+                scale = self.Gain[0].detach()
         else:
-            scale = self.Gain[0].detach()
-
+            scale = self.Gain[s]
         rescale = 1.0 / scale.clone().detach()
 
         if self.stage <= 2:
@@ -1440,7 +1388,7 @@ class VICVBR(ModelCompressionBase):
             y_hat, y_likelihoods = self._stequantization(y_hat, params, y.size(2), y.size(3), kernel_size, padding, scale, rescale)
 
             x_hat = self.g_s(y_hat)
-
+        x_hat = torch.clamp(x_hat, 0, 1)
         output = {
                 "image":inputs["image"].to(self.device),
                 "reconstruction_image":x_hat,
@@ -1448,6 +1396,44 @@ class VICVBR(ModelCompressionBase):
                 "lamda": self.lmbda[s]
             }
         return output
+
+    def eval_epoch(
+        self,
+        val_dataloader = None, 
+        log_path = None
+    ):
+        psnrs = [AverageMeter() for i in self.lmbda]
+        bpps = [AverageMeter() for i in self.lmbda]
+        with torch.no_grad():
+            for batch_id, inputs in enumerate(val_dataloader):
+                b, c, h, w = inputs["image"].shape
+                for s in range(self.levels):
+                    output = self.forward(inputs = inputs, s = s, is_train = False)
+                    
+                    bpps[s].update(
+                        sum(
+                            (torch.log(likelihoods).sum() / (-math.log(2) * b * h * w))
+                            for likelihoods in output["likelihoods"].values()
+                        )
+                    )
+                    
+                    for i in range(b):
+                        psnrs[s].update(calculate_psnr(output["reconstruction_image"].cpu() * 255, inputs["image"].cpu() * 255))
+
+        log_message = ""
+        for index, lamda in enumerate(self.lmbda):
+            log_message = log_message + f"lamda = {lamda}, PSNR = {psnrs[index].avg}, BPP = {bpps[index].avg}\n"
+            
+        print(log_message)
+        if log_path != None:
+            with open(log_path, "a") as file:
+                file.write(log_message+"\n")
+                
+        output = {
+            "log_message":log_message,
+            "PSNR": psnrs,
+            "bpp": bpps
+        }
 
     def _stequantization(self, y_hat, params, height, width, kernel_size, padding, scale, rescale):
         y_likelihoods = torch.zeros([y_hat.size(0), y_hat.size(1), height, width]).to(scale.device)
@@ -1477,3 +1463,198 @@ class VICVBR(ModelCompressionBase):
                 y_hat[:, :, h + padding, w + padding] = y_q
         y_hat = F.pad(y_hat, (-padding, -padding, -padding, -padding))
         return y_hat, y_likelihoods
+    
+    
+class VICVBR2(ModelCompressionBase):
+    """Self-attention model variant from `"Learned Image Compression with
+    Discretized Gaussian Mixture Likelihoods and Attention Modules"
+    <https://arxiv.org/abs/2001.01568>`_, by Zhengxue Cheng, Heming Sun, Masaru
+    Takeuchi, Jiro Katto.
+    Uses self-attention, residual blocks with small convolutions (3x3 and 1x1),
+    and sub-pixel convolutions for up-sampling.
+    Args:
+        N (int): Number of channels
+    """
+
+    def __init__(
+        self, 
+        image_channel = 3,
+        image_height = 512,
+        image_weight = 512,
+        out_channel_m= 192, 
+        out_channel_n = 192,
+        lamda = None,
+        finetune_model_dir = None,
+        stage = 1,
+        device = "cuda"
+    ):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
+        self.N = out_channel_n
+        self.M = out_channel_m
+        self.stage = stage
+
+        self.g_a = nn.Sequential(
+            conv(3, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.M, kernel_size=5, stride=2),
+        )
+
+        self.g_s = nn.Sequential(
+            deconv(self.M, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, 3, kernel_size=5, stride=2),
+        )
+
+        self.h_a = nn.Sequential(
+            conv(self.M, self.N, stride=1, kernel_size=3),
+            nn.LeakyReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+            nn.LeakyReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+        )
+
+        self.h_s = nn.Sequential(
+            deconv(self.N, self.M, stride=2, kernel_size=5),
+            nn.LeakyReLU(inplace=True),
+            deconv(self.M, self.M * 3 // 2, stride=2, kernel_size=5),
+            nn.LeakyReLU(inplace=True),
+            conv(self.M * 3 // 2, self.M * 2, stride=1, kernel_size=3),
+        )
+
+
+        self.entropy_parameters = nn.Sequential(
+            nn.Conv2d(self.M * 12 // 3, self.M * 10 // 3, 1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(self.M * 10 // 3, self.M * 8 // 3, 1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(self.M * 8 // 3, self.M * 6 // 3, 1),
+        )
+
+        self.context_prediction = MaskedConv2d(
+            self.M, 2 * self.M, kernel_size=5, padding=2, stride=1
+        )
+
+        self.gaussian_conditional = GaussianConditional(None)
+        
+        # self.lmbda = [0.0018, 0.0035, 0.0067, 0.0130, 0.025, 0.0483, 0.0932, 0.18]
+        self.lmbda = [0.0025, 0.0035, 0.0067, 0.0130, 0.025, 0.0483, 0.0932, 0.18]
+        # self.lmbda = [0.0002, 0.0004, 0.0009, 0.0016, 0.0036, 0.0081]
+        # self.gain = Gain().to(self.device)
+
+        self.param_pre = ParameterEstimation(
+            latent_channel = self.out_channel_m, 
+            latent_width = (int)(self.image_weight / 16), 
+            latent_heigh = (int)(self.image_height / 16), 
+        ).to(self.device)
+
+        self.levels = len(self.lmbda)  # 8
+
+    def forward(self, inputs, s = 1, is_train = True):
+        x = inputs["image"].to(self.device)
+        if is_train == True:
+            if self.stage == 1:
+                s = self.levels - 1
+            else:
+                s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+
+        y = self.g_a(x)
+        # y_gain = self.gain(y)
+        # y = y_gain[:,s,:,:,:]
+        
+        params = self.param_pre(y, torch.tensor([s],dtype = torch.float32).to(self.device))
+        k, b = params.chunk(2, 1)
+        y = y * k + b
+        
+        
+        z = self.h_a(y)
+        z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        params = self.h_s(z_hat)
+
+        y_hat = self.gaussian_conditional.quantize(y, "noise" if self.training else "dequantize") 
+        ctx_params = self.context_prediction(y_hat)
+        gaussian_params = self.entropy_parameters(
+            torch.cat((params, ctx_params), dim=1)
+        )
+        scales_hat, means_hat = gaussian_params.chunk(2, 1)
+        _, y_likelihoods = self.gaussian_conditional(y, scales_hat, means=means_hat)
+        x_hat = self.g_s(y_hat)
+
+        x_hat = torch.clamp(x_hat, 0, 1)
+        output = {
+                "image":inputs["image"].to(self.device),
+                "reconstruction_image":x_hat,
+                "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+                "lamda": self.lmbda[s]
+            }
+        return output
+
+    def test_epoch(self, epoch, test_dataloader, log_path = None):
+        total_loss = AverageMeter()
+        self.eval()
+        self.to(self.device)
+        
+        with torch.no_grad():
+            for s in range(self.levels):
+                for batch_id, inputs in enumerate(test_dataloader):
+                    """ forward """
+                    output = self.forward(inputs, s = s, is_train = False)
+
+                    """ calculate loss """
+                    out_criterion = self.compute_loss(output)
+                    total_loss.update(out_criterion["total_loss"].item())
+
+            str = "Test Epoch: {:d}, total_loss: {:.4f}".format(
+                epoch,
+                total_loss.avg, 
+            )
+        print(str)
+        with open(log_path, "a") as file:
+            file.write(str+"\n")
+        return total_loss.avg
+
+
+    def eval_epoch(
+        self,
+        val_dataloader = None, 
+        log_path = None
+    ):
+        psnrs = [AverageMeter() for i in self.lmbda]
+        bpps = [AverageMeter() for i in self.lmbda]
+        with torch.no_grad():
+            for batch_id, inputs in enumerate(val_dataloader):
+                b, c, h, w = inputs["image"].shape
+                for s in range(self.levels):
+                    output = self.forward(inputs = inputs, s = s, is_train = False)
+                    
+                    bpps[s].update(
+                        sum(
+                            (torch.log(likelihoods).sum() / (-math.log(2) * b * h * w))
+                            for likelihoods in output["likelihoods"].values()
+                        )
+                    )
+                    
+                    for i in range(b):
+                        psnrs[s].update(calculate_psnr(output["reconstruction_image"].cpu() * 255, inputs["image"].cpu() * 255))
+
+        log_message = ""
+        for index, lamda in enumerate(self.lmbda):
+            log_message = log_message + f"lamda = {lamda}, PSNR = {psnrs[index].avg}, BPP = {bpps[index].avg}\n"
+            
+        print(log_message)
+        if log_path != None:
+            with open(log_path, "a") as file:
+                file.write(log_message+"\n")
+                
+        output = {
+            "log_message":log_message,
+            "PSNR": psnrs,
+            "bpp": bpps
+        }

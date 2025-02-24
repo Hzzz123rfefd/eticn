@@ -11,7 +11,7 @@ model:
   out_channel_n: 128
   lamda: null
   finetune_model_dir: null
-  stage: 1
+  stage: 2
   device: cuda   
 
 # trainning args
@@ -20,7 +20,7 @@ traininng:
   epochs: 1000          
   learning_rate: 0.0001   
   optimizer: Adam              
-  weight_decay: 0.0001
+  weight_decay: 0.0001   
   clip_max_norm: 0.5
   factor: 0.3
   patience: 15         
@@ -38,5 +38,5 @@ dataset:
 
 
 logging:
-  eval_interval: 1            
+  eval_interval: 5       
   save_dir: "./saved_model/vicvbr"   

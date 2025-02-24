@@ -34,6 +34,7 @@ class ModelBase(nn.Module):
             eval_interval:int = 10,
             save_model_dir:str = None
         ):
+            self.to(self.device)
             ## 1 trainning log path 
             first_trainning = True
             check_point_path = save_model_dir  + "/checkpoint.pth"
@@ -74,13 +75,14 @@ class ModelBase(nn.Module):
                 lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
                 best_loss = checkpoint["loss"]
                 last_epoch = checkpoint["epoch"] + 1
+                # optimizer.param_groups[0]['lr'] = 0.0001
 
             try:
                 for epoch in range(last_epoch, total_epoch):
                     print(f"Learning rate: {optimizer.param_groups[0]['lr']}")
                     train_loss = self.train_one_epoch(epoch,train_dataloader, optimizer,clip_max_norm,log_path)
                     test_loss = self.test_epoch(epoch,test_dataloader,log_path)
-                    loss = train_loss + test_loss
+                    loss = test_loss
                     lr_scheduler.step(loss)
                     is_best = loss < best_loss
                     best_loss = min(loss, best_loss)
@@ -221,8 +223,8 @@ class ModelCompressionBase(ModelBase):
             (torch.log(likelihoods).sum() / (-math.log(2) * num_pixels))
             for likelihoods in input["likelihoods"].values()
         )
-        output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"])
-        output["total_loss"] = lamda * output["bpp_loss"] + output["reconstruction_loss"]
+        output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"]) * 255**2
+        output["total_loss"] = output["bpp_loss"] + lamda * output["reconstruction_loss"]
         return output
     
     def trainning(            
