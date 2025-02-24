@@ -1336,7 +1336,7 @@ class VICVBR(ModelCompressionBase):
         # self.lmbda = [0.0002, 0.0004, 0.0009, 0.0016, 0.0036, 0.0081]
         self.Gain = torch.nn.Parameter(torch.tensor(
             [1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]), requires_grad=True)
-        self.levels = len(self.lmbda)  # 8
+        self.levels = len(self.lmbda) 
 
     @property
     def downsampling_factor(self) -> int:
@@ -1360,7 +1360,7 @@ class VICVBR(ModelCompressionBase):
         rescale = 1.0 / scale.clone().detach()
 
         if self.stage <= 2:
-            # print("noise quant: True, ste quant:False, stage:{}".format(self.stage))
+            # print("noise quant: True, ste quant:False, stage:{}, s = {}, scale = {}".format(self.stage, s, self.Gain[s]))
             y = self.g_a(x)
             z = self.h_a(y)
             z_hat, z_likelihoods = self.entropy_bottleneck(z)
@@ -1411,7 +1411,7 @@ class VICVBR(ModelCompressionBase):
             for batch_id, inputs in enumerate(val_dataloader):
                 b, c, h, w = inputs["image"].shape
                 for s in range(self.levels):
-                    output = self.forward(inputs = inputs, s = s)
+                    output = self.forward(inputs = inputs, s = s, is_train = False)
                     
                     bpps[s].update(
                         sum(
@@ -1467,8 +1467,7 @@ class VICVBR(ModelCompressionBase):
         y_hat = F.pad(y_hat, (-padding, -padding, -padding, -padding))
         return y_hat, y_likelihoods
     
-    
-class VICVBR2(ModelCompressionBase):
+class VICVBR2(ModelVBRCompressionBase):
     """Self-attention model variant from `"Learned Image Compression with
     Discretized Gaussian Mixture Likelihoods and Attention Modules"
     <https://arxiv.org/abs/2001.01568>`_, by Zhengxue Cheng, Heming Sun, Masaru
@@ -1486,15 +1485,12 @@ class VICVBR2(ModelCompressionBase):
         image_weight = 512,
         out_channel_m= 192, 
         out_channel_n = 192,
-        lamda = None,
-        finetune_model_dir = None,
         stage = 1,
         device = "cuda"
     ):
-        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device)
         self.N = out_channel_n
         self.M = out_channel_m
-        self.stage = stage
 
         self.g_a = nn.Sequential(
             conv(3, self.N, kernel_size=5, stride=2),
@@ -1547,10 +1543,8 @@ class VICVBR2(ModelCompressionBase):
 
         self.gaussian_conditional = GaussianConditional(None)
         
-        # self.lmbda = [0.0018, 0.0035, 0.0067, 0.0130, 0.025, 0.0483, 0.0932, 0.18]
-        self.lmbda = [0.0025, 0.0035, 0.0067, 0.0130, 0.025, 0.0483, 0.0932, 0.18]
-        # self.lmbda = [0.0002, 0.0004, 0.0009, 0.0016, 0.0036, 0.0081]
-        # self.gain = Gain().to(self.device)
+        self.Gain = torch.nn.Parameter(torch.tensor(
+             [[1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]] * self.M, dtype=torch.float32), requires_grad=True)
 
         self.param_pre = ParameterEstimation(
             latent_channel = self.out_channel_m, 
@@ -1558,39 +1552,57 @@ class VICVBR2(ModelCompressionBase):
             latent_heigh = (int)(self.image_height / 16), 
         ).to(self.device)
 
-        self.levels = len(self.lmbda)  # 8
-
     def forward(self, inputs, s = 1, is_train = True):
         x = inputs["image"].to(self.device)
         if is_train == True:
-            if self.stage == 1:
-                s = self.levels - 1
-            else:
+            if self.stage > 1:
                 s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+                if s != 0:
+                    scale = torch.max(self.Gain[:, s], torch.tensor(1e-4)) + 1e-9
+                else:
+                    s = 0
+                    scale = self.Gain[:, s].detach().clone()
+            else:
+                s = self.levels - 1
+                scale = self.Gain[:, 0].detach()
+        else:
+            scale = self.Gain[:, s]
+        scale = scale.unsqueeze(0).unsqueeze(2).unsqueeze(3)
+        rescale = 1.0 / scale.clone().detach()
 
-        y = self.g_a(x)
-        # y_gain = self.gain(y)
-        # y = y_gain[:,s,:,:,:]
-        
-        params = self.param_pre(y, torch.tensor([s],dtype = torch.float32).to(self.device))
-        k, b = params.chunk(2, 1)
-        y = y * k + b
-        
-        
-        z = self.h_a(y)
-        z_hat, z_likelihoods = self.entropy_bottleneck(z)
-        params = self.h_s(z_hat)
+        if self.stage <= 2:
+            # print("noise quant: True, ste quant:False, stage:{}, s = {}, scale = {}".format(self.stage, s, self.Gain[s]))
+            y = self.g_a(x)
+            z = self.h_a(y)
+            z_hat, z_likelihoods = self.entropy_bottleneck(z)
+            params = self.h_s(z_hat)
 
-        y_hat = self.gaussian_conditional.quantize(y, "noise" if self.training else "dequantize") 
-        ctx_params = self.context_prediction(y_hat)
-        gaussian_params = self.entropy_parameters(
-            torch.cat((params, ctx_params), dim=1)
-        )
-        scales_hat, means_hat = gaussian_params.chunk(2, 1)
-        _, y_likelihoods = self.gaussian_conditional(y, scales_hat, means=means_hat)
-        x_hat = self.g_s(y_hat)
+            y_hat = self.gaussian_conditional.quantize(y * scale, "noise" if self.training else "dequantize") * rescale
+            ctx_params = self.context_prediction(y_hat)
+            gaussian_params = self.entropy_parameters(
+                torch.cat((params, ctx_params), dim=1)
+            )
+            scales_hat, means_hat = gaussian_params.chunk(2, 1)
+            _, y_likelihoods = self.gaussian_conditional(y * scale - means_hat * scale, scales_hat * scale)
+            x_hat = self.g_s(y_hat)
+        else:
+            print("noise quant: False, ste quant: True, stage:{}".format(self.stage))
+            y = self.g_a(x)
+            z = self.h_a(y)
+            _, z_likelihoods = self.entropy_bottleneck(z)
 
-        x_hat = torch.clamp(x_hat, 0, 1)
+            z_offset = self.entropy_bottleneck._get_medians()
+            z_tmp = z - z_offset
+            z_hat = ste_round(z_tmp) + z_offset
+
+            params = self.h_s(z_hat)
+            kernel_size = 5  # context prediction kernel size
+            padding = (kernel_size - 1) // 2
+            y_hat = F.pad(y, (padding, padding, padding, padding))
+            y_hat, y_likelihoods = self._stequantization(y_hat, params, y.size(2), y.size(3), kernel_size, padding, scale, rescale)
+
+            x_hat = self.g_s(y_hat)
+        # x_hat = torch.clamp(x_hat, 0, 1)
         output = {
                 "image":inputs["image"].to(self.device),
                 "reconstruction_image":x_hat,
@@ -1599,65 +1611,65 @@ class VICVBR2(ModelCompressionBase):
             }
         return output
 
-    def test_epoch(self, epoch, test_dataloader, log_path = None):
-        total_loss = AverageMeter()
-        self.eval()
-        self.to(self.device)
+    # def test_epoch(self, epoch, test_dataloader, log_path = None):
+    #     total_loss = AverageMeter()
+    #     self.eval()
+    #     self.to(self.device)
         
-        with torch.no_grad():
-            for s in range(self.levels):
-                for batch_id, inputs in enumerate(test_dataloader):
-                    """ forward """
-                    output = self.forward(inputs, s = s, is_train = False)
+    #     with torch.no_grad():
+    #         for s in range(self.levels):
+    #             for batch_id, inputs in enumerate(test_dataloader):
+    #                 """ forward """
+    #                 output = self.forward(inputs, s = s, is_train = False)
 
-                    """ calculate loss """
-                    out_criterion = self.compute_loss(output)
-                    total_loss.update(out_criterion["total_loss"].item())
+    #                 """ calculate loss """
+    #                 out_criterion = self.compute_loss(output)
+    #                 total_loss.update(out_criterion["total_loss"].item())
 
-            str = "Test Epoch: {:d}, total_loss: {:.4f}".format(
-                epoch,
-                total_loss.avg, 
-            )
-        print(str)
-        with open(log_path, "a") as file:
-            file.write(str+"\n")
-        return total_loss.avg
+    #         str = "Test Epoch: {:d}, total_loss: {:.4f}".format(
+    #             epoch,
+    #             total_loss.avg, 
+    #         )
+    #     print(str)
+    #     with open(log_path, "a") as file:
+    #         file.write(str+"\n")
+    #     return total_loss.avg
 
 
-    def eval_epoch(
-        self,
-        val_dataloader = None, 
-        log_path = None
-    ):
-        psnrs = [AverageMeter() for i in self.lmbda]
-        bpps = [AverageMeter() for i in self.lmbda]
-        with torch.no_grad():
-            for batch_id, inputs in enumerate(val_dataloader):
-                b, c, h, w = inputs["image"].shape
-                for s in range(self.levels):
-                    output = self.forward(inputs = inputs, s = s, is_train = False)
+    # def eval_epoch(
+    #     self,
+    #     val_dataloader = None, 
+    #     log_path = None
+    # ):
+    #     psnrs = [AverageMeter() for i in self.lmbda]
+    #     bpps = [AverageMeter() for i in self.lmbda]
+    #     with torch.no_grad():
+    #         for batch_id, inputs in enumerate(val_dataloader):
+    #             b, c, h, w = inputs["image"].shape
+    #             for s in range(self.levels):
+    #                 output = self.forward(inputs = inputs, s = s, is_train = False)
                     
-                    bpps[s].update(
-                        sum(
-                            (torch.log(likelihoods).sum() / (-math.log(2) * b * h * w))
-                            for likelihoods in output["likelihoods"].values()
-                        )
-                    )
+    #                 bpps[s].update(
+    #                     sum(
+    #                         (torch.log(likelihoods).sum() / (-math.log(2) * b * h * w))
+    #                         for likelihoods in output["likelihoods"].values()
+    #                     )
+    #                 )
                     
-                    for i in range(b):
-                        psnrs[s].update(calculate_psnr(output["reconstruction_image"].cpu() * 255, inputs["image"].cpu() * 255))
+    #                 for i in range(b):
+    #                     psnrs[s].update(calculate_psnr(output["reconstruction_image"].cpu() * 255, inputs["image"].cpu() * 255))
 
-        log_message = ""
-        for index, lamda in enumerate(self.lmbda):
-            log_message = log_message + f"lamda = {lamda}, PSNR = {psnrs[index].avg}, BPP = {bpps[index].avg}\n"
+    #     log_message = ""
+    #     for index, lamda in enumerate(self.lmbda):
+    #         log_message = log_message + f"lamda = {lamda}, s = {index}, scale: {self.Gain.data[0, index].cpu().numpy():0.4f},   stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
             
-        print(log_message)
-        if log_path != None:
-            with open(log_path, "a") as file:
-                file.write(log_message+"\n")
+    #     print(log_message)
+    #     if log_path != None:
+    #         with open(log_path, "a") as file:
+    #             file.write(log_message+"\n")
                 
-        output = {
-            "log_message":log_message,
-            "PSNR": psnrs,
-            "bpp": bpps
-        }
+    #     output = {
+    #         "log_message":log_message,
+    #         "PSNR": psnrs,
+    #         "bpp": bpps
+    #     }
