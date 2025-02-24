@@ -75,7 +75,7 @@ class ModelBase(nn.Module):
                 lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
                 best_loss = checkpoint["loss"]
                 last_epoch = checkpoint["epoch"] + 1
-                # optimizer.param_groups[0]['lr'] = 0.0001
+                optimizer.param_groups[0]['lr'] = 0.0001
 
             try:
                 for epoch in range(last_epoch, total_epoch):

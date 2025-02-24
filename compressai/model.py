@@ -1360,19 +1360,19 @@ class VICVBR(ModelCompressionBase):
         rescale = 1.0 / scale.clone().detach()
 
         if self.stage <= 2:
-            print("noise quant: True, ste quant:False, stage:{}".format(self.stage))
+            # print("noise quant: True, ste quant:False, stage:{}".format(self.stage))
             y = self.g_a(x)
             z = self.h_a(y)
             z_hat, z_likelihoods = self.entropy_bottleneck(z)
             params = self.h_s(z_hat)
 
-            y_hat = self.gaussian_conditional.quantize(y*scale, "noise" if self.training else "dequantize") * rescale
+            y_hat = self.gaussian_conditional.quantize(y * scale, "noise" if self.training else "dequantize") * rescale
             ctx_params = self.context_prediction(y_hat)
             gaussian_params = self.entropy_parameters(
                 torch.cat((params, ctx_params), dim=1)
             )
             scales_hat, means_hat = gaussian_params.chunk(2, 1)
-            _, y_likelihoods = self.gaussian_conditional(y*scale - means_hat*scale, scales_hat*scale)
+            _, y_likelihoods = self.gaussian_conditional(y * scale - means_hat * scale, scales_hat * scale)
             x_hat = self.g_s(y_hat)
         else:
             print("noise quant: False, ste quant: True, stage:{}".format(self.stage))
@@ -1391,7 +1391,7 @@ class VICVBR(ModelCompressionBase):
             y_hat, y_likelihoods = self._stequantization(y_hat, params, y.size(2), y.size(3), kernel_size, padding, scale, rescale)
 
             x_hat = self.g_s(y_hat)
-        x_hat = torch.clamp(x_hat, 0, 1)
+        # x_hat = torch.clamp(x_hat, 0, 1)
         output = {
                 "image":inputs["image"].to(self.device),
                 "reconstruction_image":x_hat,
@@ -1425,7 +1425,7 @@ class VICVBR(ModelCompressionBase):
 
         log_message = ""
         for index, lamda in enumerate(self.lmbda):
-            log_message = log_message + f"lamda = {lamda}, s = {index}, scale: {self.Gain.data[s].cpu().numpy():0.4f},   stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
+            log_message = log_message + f"lamda = {lamda}, s = {index}, scale: {self.Gain.data[index].cpu().numpy():0.4f},   stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
             
         print(log_message)
         if log_path != None:

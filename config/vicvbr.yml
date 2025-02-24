@@ -21,7 +21,7 @@ traininng:
   learning_rate: 0.0001   
   optimizer: Adam              
   weight_decay: 0.0001   
-  clip_max_norm: 0.5
+  clip_max_norm: 1
   factor: 0.3
   patience: 15         
   device: cuda
@@ -38,5 +38,5 @@ dataset:
 
 
 logging:
-  eval_interval: 5       
+  eval_interval: 1       
   save_dir: "./saved_model/vicvbr"   
