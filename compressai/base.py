@@ -133,7 +133,7 @@ class ModelBase(nn.Module):
 
             """ grad clip """
             if clip_max_norm > 0:
-                clip_gradient(optimizer,clip_max_norm)
+                torch.nn.utils.clip_grad_norm_(self.parameters(), clip_max_norm)
 
             """ modify parameters """
             optimizer.step()

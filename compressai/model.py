@@ -1350,6 +1350,7 @@ class VICVBR(ModelCompressionBase):
                 if s != 0:
                     scale = torch.max(self.Gain[s], torch.tensor(1e-4)) + 1e-9
                 else:
+                    s = 0
                     scale = self.Gain[s].detach()
             else:
                 s = self.levels - 1
@@ -1359,6 +1360,7 @@ class VICVBR(ModelCompressionBase):
         rescale = 1.0 / scale.clone().detach()
 
         if self.stage <= 2:
+            print("noise quant: True, ste quant:False, stage:{}".format(self.stage))
             y = self.g_a(x)
             z = self.h_a(y)
             z_hat, z_likelihoods = self.entropy_bottleneck(z)
@@ -1373,6 +1375,7 @@ class VICVBR(ModelCompressionBase):
             _, y_likelihoods = self.gaussian_conditional(y*scale - means_hat*scale, scales_hat*scale)
             x_hat = self.g_s(y_hat)
         else:
+            print("noise quant: False, ste quant: True, stage:{}".format(self.stage))
             y = self.g_a(x)
             z = self.h_a(y)
             _, z_likelihoods = self.entropy_bottleneck(z)
@@ -1422,7 +1425,7 @@ class VICVBR(ModelCompressionBase):
 
         log_message = ""
         for index, lamda in enumerate(self.lmbda):
-            log_message = log_message + f"lamda = {lamda}, PSNR = {psnrs[index].avg}, BPP = {bpps[index].avg}\n"
+            log_message = log_message + f"lamda = {lamda}, s = {index}, scale: {self.Gain.data[s].cpu().numpy():0.4f},   stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
             
         print(log_message)
         if log_path != None:
