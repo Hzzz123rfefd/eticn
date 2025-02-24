@@ -11,7 +11,7 @@ model:
   out_channel_n: 128
   lamda: null
   finetune_model_dir: null
-  stage: 2
+  stage: 1
   device: cuda   
 
 # trainning args

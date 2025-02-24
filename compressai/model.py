@@ -1351,7 +1351,7 @@ class VICVBR(ModelCompressionBase):
                     scale = torch.max(self.Gain[s], torch.tensor(1e-4)) + 1e-9
                 else:
                     s = 0
-                    scale = self.Gain[s].detach()
+                    scale = self.Gain[s].detach().clone()
             else:
                 s = self.levels - 1
                 scale = self.Gain[0].detach()
@@ -1411,7 +1411,7 @@ class VICVBR(ModelCompressionBase):
             for batch_id, inputs in enumerate(val_dataloader):
                 b, c, h, w = inputs["image"].shape
                 for s in range(self.levels):
-                    output = self.forward(inputs = inputs, s = s, is_train = False)
+                    output = self.forward(inputs = inputs, s = s)
                     
                     bpps[s].update(
                         sum(
