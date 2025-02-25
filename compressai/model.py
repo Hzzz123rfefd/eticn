@@ -1611,6 +1611,179 @@ class VICVBR2(ModelVBRCompressionBase):
             }
         return output
 
+class VICVBR3(ModelVBRCompressionBase):
+
+    def __init__(
+        self, 
+        image_channel = 3,
+        image_height = 512,
+        image_weight = 512,
+        out_channel_m= 192, 
+        out_channel_n = 192,
+        stage = 1,
+        device = "cuda"
+    ):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device)
+        self.N = out_channel_n
+        self.M = out_channel_m
+
+        self.g_a = nn.Sequential(
+            conv(3, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.M, kernel_size=5, stride=2),
+        )
+
+        self.g_s = nn.Sequential(
+            deconv(self.M, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, 3, kernel_size=5, stride=2),
+        )
+
+        self.h_a = nn.Sequential(
+            conv(self.M, self.N, stride=1, kernel_size=3),
+            nn.LeakyReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+            nn.LeakyReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+        )
+
+        self.h_s = nn.Sequential(
+            deconv(self.N, self.M, stride=2, kernel_size=5),
+            nn.LeakyReLU(inplace=True),
+            deconv(self.M, self.M * 3 // 2, stride=2, kernel_size=5),
+            nn.LeakyReLU(inplace=True),
+            conv(self.M * 3 // 2, self.M * 2, stride=1, kernel_size=3),
+        )
+
+        self.ddpm = ModelDDPM(
+            width = image_weight,
+            height = image_height,
+            channel = image_channel
+        )
+
+        self.entropy_parameters = nn.Sequential(
+            nn.Conv2d(self.M * 12 // 3, self.M * 10 // 3, 1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(self.M * 10 // 3, self.M * 8 // 3, 1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(self.M * 8 // 3, self.M * 6 // 3, 1),
+        )
+
+        self.context_prediction = MaskedConv2d(
+            self.M, 2 * self.M, kernel_size=5, padding=2, stride=1
+        )
+
+        self.gaussian_conditional = GaussianConditional(None)
+        
+        self.Gain = torch.nn.Parameter(torch.tensor(
+             [[1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]] * self.M, dtype=torch.float32), requires_grad=True)
+
+    def forward(self, inputs, s = 1, is_train = True):
+        x = inputs["image"].to(self.device)
+        if is_train == True:
+            if self.stage > 1:
+                s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+                if s != 0:
+                    scale = torch.max(self.Gain[:, s], torch.tensor(1e-4)) + 1e-9
+                else:
+                    s = 0
+                    scale = self.Gain[:, s].detach().clone()
+            else:
+                s = self.levels - 1
+                scale = self.Gain[:, 0].detach()
+        else:
+            scale = self.Gain[:, s].detach()
+        scale = scale.unsqueeze(0).unsqueeze(2).unsqueeze(3)
+        rescale = 1.0 / scale.clone().detach()
+
+        if self.stage <= 2:
+            # print("noise quant: True, ste quant:False, stage:{}, s = {}, scale = {}".format(self.stage, s, self.Gain[s]))
+            y = self.g_a(x)
+            z = self.h_a(y)
+            z_hat, z_likelihoods = self.entropy_bottleneck(z)
+            params = self.h_s(z_hat)
+
+            y_hat = self.gaussian_conditional.quantize(y * scale, "noise" if self.training else "dequantize") * rescale
+            ctx_params = self.context_prediction(y_hat)
+            gaussian_params = self.entropy_parameters(
+                torch.cat((params, ctx_params), dim=1)
+            )
+            scales_hat, means_hat = gaussian_params.chunk(2, 1)
+            _, y_likelihoods = self.gaussian_conditional(y * scale - means_hat * scale, scales_hat * scale)
+            if is_train or 1:
+                x_hat, alpha_t = self.ddpm(x, y_hat)
+            else:
+                b, _, _, _ = y_hat.shape
+                x_hat = self.ddpm.sample(
+                    sample_num = b,
+                    context = y_hat
+                )
+                alpha_t = None
+            
+        output = {
+                "image":inputs["image"].to(self.device),
+                "reconstruction_image":x_hat,
+                "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+                "lamda": self.lmbda[s],
+                "alpha_t":alpha_t
+            }
+        return output
+    
+    def compute_loss(self, input):
+        lamda = input["lamda"]
+        alpha_t = input["alpha_t"]
+        N, _, H, W = input["image"].size()
+        output = {}
+        num_pixels = N * H * W
+
+        output["bpp_loss"] = sum(
+            (torch.log(likelihoods).sum() / (-math.log(2) * num_pixels))
+            for likelihoods in input["likelihoods"].values()
+        )
+
+        if alpha_t != None:
+            output["true_reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"])* 255**2
+            output["reconstruction_loss"] = torch.Tensor([0]).to(self.device)
+            for i in range(N):
+                output["reconstruction_loss"] = output["reconstruction_loss"] + (alpha_t[i] / (1 - alpha_t[i])) * F.mse_loss(input["reconstruction_image"][i, :, :, :], input["image"][i, :, :, :]) * 255**2
+            output["reconstruction_loss"] = output["reconstruction_loss"] / N
+        else:
+            output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"])* 255**2
+        output["total_loss"] = output["bpp_loss"] + lamda * output["reconstruction_loss"]
+        return output
+    
+    def test_epoch(self, epoch, test_dataloader, log_path = None):
+        total_loss = AverageMeter()
+        self.eval()
+        self.to(self.device)
+        with torch.no_grad():
+            for s in range(self.levels):
+                for batch_id, inputs in enumerate(test_dataloader):
+                    """ forward """
+                    output = self.forward(inputs, s = s, is_train = False)
+
+                    """ calculate loss """
+                    out_criterion = self.compute_loss(output)
+                    total_loss.update(out_criterion["total_loss"].item())
+
+            str = "Test Epoch: {:d}, total_loss: {:.4f}".format(
+                epoch,
+                total_loss.avg, 
+            )
+        print(str)
+        with open(log_path, "a") as file:
+            file.write(str+"\n")
+        return total_loss.avg
+    
+    
     # def test_epoch(self, epoch, test_dataloader, log_path = None):
     #     total_loss = AverageMeter()
     #     self.eval()
@@ -1673,3 +1846,76 @@ class VICVBR2(ModelVBRCompressionBase):
     #         "PSNR": psnrs,
     #         "bpp": bpps
     #     }
+
+class ModelDDPM(ModelDiffusionBase):
+    def __init__(
+        self,
+        width,
+        height,
+        channel = 3,
+        time_dim = 32, 
+        noise_steps = 500, 
+        beta_start = 1e-4, 
+        beta_end = 0.02,
+        device = "cuda"
+    ):
+        super().__init__(width, height, channel, time_dim, noise_steps, beta_start, beta_end, device)
+        self.predict_model = Unet(
+            width = self.width,
+            height = self.height, 
+            in_c = self.channel, 
+            out_c = self.channel, 
+            time_dim = self.time_dim
+        ).to(self.device)
+    
+    def sample(self, sample_num = 1, context = None, guide_w = 0.0):
+        self.eval()
+        with torch.no_grad():
+            x_i = torch.zeros(sample_num, self.channel, self.height, self.width).to(self.device)
+            for i in range(self.noise_steps, 1, -1): 
+                # print(f'sampling timestep {i}',end='\r')
+
+                x_is = x_i.repeat(2,1,1,1)
+                t = torch.tensor([i]).repeat(sample_num).to(self.device)
+                t_is = t.repeat(2)
+                
+                context_s = context.repeat(2,1,1,1)
+                # z = torch.randn(sample_num, self.channel, self.height, self.width).to(self.device) if i > 1 else 0
+                
+                x_0 = self.predict_model(x_is, t_is, context_s)
+                x_01 = x_0[:sample_num]
+                x_02 = x_0[sample_num:]
+                
+                x_0 = (1+guide_w) * x_01 - guide_w * x_02
+                
+                z_t = (x_i - self.sqrtab[t, None, None, None] * x_0) / self.sqrtmab[t, None, None, None]
+                x_i = (
+                    self.sqrtab[t - 1, None, None, None] * x_0 + self.sqrtmab[t - 1, None, None, None] * z_t
+                )
+                return x_0
+
+            x_i = torch.clamp(x_i, min = 0, max = 1)
+        return x_i
+
+    def forward(self, x, context):
+        _ts = torch.randint(1, self.noise_steps + 1, (x.shape[0],)).to(self.device)  # t ~ Uniform(0, n_T)
+        noise = torch.randn_like(x)  # eps ~ N(0, 1)
+
+        x_t = (
+            self.sqrtab[_ts, None, None, None] * x
+            + self.sqrtmab[_ts, None, None, None] * noise
+        )  
+        
+        x_0 = self.predict_model(x_t, _ts, context)
+        alphabar_t = self.alphabar_t[_ts]
+        return x_0, alphabar_t
+    
+if __name__ == '__main__':
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    batch = 2
+    unet = Unet(in_c=3,out_c=3,time_dim=32).to(device)
+    x = torch.randn(batch, 3, 720, 960).to(device)
+    t = torch.rand(batch).to(device)
+    output_t = unet(x,t)
+    print(output_t.shape)
+

@@ -544,3 +544,61 @@ class ModelVBRCompressionBase(ModelCompressionBase):
             "PSNR": psnrs,
             "bpp": bpps
         }
+        
+class ModelDiffusionBase(ModelBase):
+    def __init__(
+        self,
+        width,
+        height,
+        channel = 3,
+        time_dim = 256, 
+        noise_steps = 500, 
+        beta_start = 1e-4, 
+        beta_end = 0.02,
+        device = "cuda"
+    ):
+        super().__init__(device)
+        self.width = width
+        self.height = height
+        self.channel = channel
+        self.beta_start = beta_start
+        self.beta_end = beta_end
+        self.noise_steps = noise_steps
+        self.time_dim = time_dim
+        
+        for k, v in self.ddpm_schedules(self.beta_start, self.beta_end, self.noise_steps).items():
+            self.register_buffer(k, v)
+    
+    def ddpm_schedules(self, beta1, beta2, T):
+        """
+        Returns pre-computed schedules for DDPM sampling, training process.
+        """
+        assert beta1 < beta2 < 1.0, "beta1 and beta2 must be in (0, 1)"
+
+        beta_t = (beta2 - beta1) * torch.arange(0, T + 1, dtype=torch.float32) / T + beta1
+        sqrt_beta_t = torch.sqrt(beta_t)
+        alpha_t = 1 - beta_t
+        log_alpha_t = torch.log(alpha_t)
+        alphabar_t = torch.cumsum(log_alpha_t, dim=0).exp()
+
+        sqrtab = torch.sqrt(alphabar_t)
+        oneover_sqrta = 1 / torch.sqrt(alpha_t)
+
+        sqrtmab = torch.sqrt(1 - alphabar_t)
+        mab_over_sqrtmab_inv = (1 - alpha_t) / sqrtmab
+
+        return {
+            "alpha_t": alpha_t,  # \alpha_t
+            "oneover_sqrta": oneover_sqrta,  # 1/\sqrt{\alpha_t}
+            "sqrt_beta_t": sqrt_beta_t,  # \sqrt{\beta_t}
+            "alphabar_t": alphabar_t,  # \bar{\alpha_t}
+            "sqrtab": sqrtab,  # \sqrt{\bar{\alpha_t}}
+            "sqrtmab": sqrtmab,  # \sqrt{1-\bar{\alpha_t}}
+            "mab_over_sqrtmab": mab_over_sqrtmab_inv,  # (1-\alpha_t)/\sqrt{1-\bar{\alpha_t}}
+        }
+
+    def load_pretrained(self, save_model_dir):
+        self.load_state_dict(torch.load(save_model_dir + "/model.pth"))
+
+    def save_pretrained(self,  save_model_dir):
+        torch.save(self.state_dict(), save_model_dir + "/model.pth")    
