@@ -24,7 +24,7 @@ def main(args):
     )
     
     test_dataloader = DataLoader(
-        test_datasets, 
+        valid_datasets, 
         batch_size = config["traininng"]["batch_size"], 
         shuffle = False,
         collate_fn = test_datasets.collate_fn

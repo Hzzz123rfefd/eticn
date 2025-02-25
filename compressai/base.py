@@ -317,9 +317,9 @@ class ModelCompressionBase(ModelBase):
                 last_epoch = 0
             else:
                 checkpoint = torch.load(check_point_path, map_location = self.device)
-                optimizer.load_state_dict(checkpoint["optimizer"])
-                aux_optimizer.load_state_dict(checkpoint["aux_optimizer"])
-                lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+                # optimizer.load_state_dict(checkpoint["optimizer"])
+                # aux_optimizer.load_state_dict(checkpoint["aux_optimizer"])
+                # lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
                 best_loss = checkpoint["loss"]
                 last_epoch = checkpoint["epoch"] + 1
                 # optimizer.param_groups[0]['lr'] = 0.0001

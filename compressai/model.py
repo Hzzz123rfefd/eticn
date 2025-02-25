@@ -1612,7 +1612,7 @@ class VICVBR2(ModelVBRCompressionBase):
         return output
 
 class VICVBR3(ModelVBRCompressionBase):
-
+    
     def __init__(
         self, 
         image_channel = 3,
@@ -1718,7 +1718,7 @@ class VICVBR3(ModelVBRCompressionBase):
             )
             scales_hat, means_hat = gaussian_params.chunk(2, 1)
             _, y_likelihoods = self.gaussian_conditional(y * scale - means_hat * scale, scales_hat * scale)
-            if is_train or 1:
+            if is_train:
                 x_hat, alpha_t = self.ddpm(x, y_hat)
             else:
                 b, _, _, _ = y_hat.shape
@@ -1873,7 +1873,7 @@ class ModelDDPM(ModelDiffusionBase):
         with torch.no_grad():
             x_i = torch.zeros(sample_num, self.channel, self.height, self.width).to(self.device)
             for i in range(self.noise_steps, 1, -1): 
-                # print(f'sampling timestep {i}',end='\r')
+                print(f'sampling timestep {i}',end='\r')
 
                 x_is = x_i.repeat(2,1,1,1)
                 t = torch.tensor([i]).repeat(sample_num).to(self.device)
@@ -1892,7 +1892,7 @@ class ModelDDPM(ModelDiffusionBase):
                 x_i = (
                     self.sqrtab[t - 1, None, None, None] * x_0 + self.sqrtmab[t - 1, None, None, None] * z_t
                 )
-                return x_0
+                # return x_0
 
             x_i = torch.clamp(x_i, min = 0, max = 1)
         return x_i
