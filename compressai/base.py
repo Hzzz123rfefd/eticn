@@ -11,6 +11,7 @@ from typing import cast
 
 from compressai.utils import *
 from compressai.entropy_models import *
+from compressai.modules import *
 
 
 def configure_optimizers(net, lr):
@@ -317,9 +318,9 @@ class ModelCompressionBase(ModelBase):
                 last_epoch = 0
             else:
                 checkpoint = torch.load(check_point_path, map_location = self.device)
-                # optimizer.load_state_dict(checkpoint["optimizer"])
-                # aux_optimizer.load_state_dict(checkpoint["aux_optimizer"])
-                # lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+                optimizer.load_state_dict(checkpoint["optimizer"])
+                aux_optimizer.load_state_dict(checkpoint["aux_optimizer"])
+                lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
                 best_loss = checkpoint["loss"]
                 last_epoch = checkpoint["epoch"] + 1
                 # optimizer.param_groups[0]['lr'] = 0.0001
@@ -518,7 +519,7 @@ class ModelVBRCompressionBase(ModelCompressionBase):
             for batch_id, inputs in enumerate(val_dataloader):
                 b, c, h, w = inputs["image"].shape
                 for s in range(self.levels):
-                    output = self.forward(inputs = inputs, s = s, is_train = False)
+                    output = self.forward(inputs = inputs, s = s, is_train = True)
                     
                     bpps[s].update(
                         sum(
@@ -602,3 +603,68 @@ class ModelDiffusionBase(ModelBase):
 
     def save_pretrained(self,  save_model_dir):
         torch.save(self.state_dict(), save_model_dir + "/model.pth")    
+
+class ModelDDPM(ModelDiffusionBase):
+    def __init__(
+        self,
+        width,
+        height,
+        channel = 3,
+        time_dim = 32, 
+        noise_steps = 500, 
+        beta_start = 1e-4, 
+        beta_end = 0.02,
+        device = "cuda"
+    ):
+        super().__init__(width, height, channel, time_dim, noise_steps, beta_start, beta_end, device)
+        self.predict_model = Unet(
+            width = self.width,
+            height = self.height, 
+            in_c = self.channel, 
+            out_c = self.channel, 
+            time_dim = self.time_dim
+        ).to(self.device)
+    
+    def sample(self, sample_num = 1, context = None, guide_w = 0.0):
+        self.eval()
+        with torch.no_grad():
+            x_i = torch.zeros(sample_num, self.channel, self.height, self.width).to(self.device)
+            for i in range(self.noise_steps, 1, -1): 
+                print(f'sampling timestep {i}',end='\r')
+
+                x_is = x_i.repeat(2,1,1,1)
+                t = torch.tensor([i]).repeat(sample_num).to(self.device)
+                t_is = t.repeat(2)
+                
+                context_s = context.repeat(2,1,1,1)
+                # z = torch.randn(sample_num, self.channel, self.height, self.width).to(self.device) if i > 1 else 0
+                
+                x_0 = self.predict_model(x_is, t_is, context_s)
+                x_01 = x_0[:sample_num]
+                x_02 = x_0[sample_num:]
+                
+                x_0 = (1+guide_w) * x_01 - guide_w * x_02
+                
+                z_t = (x_i - self.sqrtab[t, None, None, None] * x_0) / self.sqrtmab[t, None, None, None]
+                x_i = (
+                    self.sqrtab[t - 1, None, None, None] * x_0 + self.sqrtmab[t - 1, None, None, None] * z_t
+                )
+                # return x_0
+
+            x_i = torch.clamp(x_i, min = 0, max = 1)
+        return x_i
+
+    def forward(self, x, context):
+        _ts = torch.randint(1, self.noise_steps + 1, (x.shape[0],)).to(self.device)  # t ~ Uniform(0, n_T)
+        noise = torch.randn_like(x)  # eps ~ N(0, 1)
+
+        x_t = (
+            self.sqrtab[_ts, None, None, None] * x
+            + self.sqrtmab[_ts, None, None, None] * noise
+        )  
+        
+        z_t = self.predict_model(x_t, _ts, context)
+        x_0 = (x_t - self.sqrtmab[_ts, None, None, None] * z_t) / self.sqrtab[_ts, None, None, None]
+        alphabar_t = self.alphabar_t[_ts]
+        return x_0, alphabar_t, z_t, noise
+    

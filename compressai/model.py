@@ -1719,7 +1719,7 @@ class VICVBR3(ModelVBRCompressionBase):
             scales_hat, means_hat = gaussian_params.chunk(2, 1)
             _, y_likelihoods = self.gaussian_conditional(y * scale - means_hat * scale, scales_hat * scale)
             if is_train:
-                x_hat, alpha_t = self.ddpm(x, y_hat)
+                x_hat, alpha_t, z_t, noise = self.ddpm(x, y_hat)
             else:
                 b, _, _, _ = y_hat.shape
                 x_hat = self.ddpm.sample(
@@ -1727,19 +1727,25 @@ class VICVBR3(ModelVBRCompressionBase):
                     context = y_hat
                 )
                 alpha_t = None
+                z_t = None
+                noise = None
             
         output = {
                 "image":inputs["image"].to(self.device),
                 "reconstruction_image":x_hat,
                 "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
                 "lamda": self.lmbda[s],
-                "alpha_t":alpha_t
+                "alpha_t":alpha_t,
+                "z_t": z_t,
+                "noise": noise
             }
         return output
     
     def compute_loss(self, input):
         lamda = input["lamda"]
         alpha_t = input["alpha_t"]
+        z_t = input["z_t"]
+        noise = input["noise"]
         N, _, H, W = input["image"].size()
         output = {}
         num_pixels = N * H * W
@@ -1751,10 +1757,11 @@ class VICVBR3(ModelVBRCompressionBase):
 
         if alpha_t != None:
             output["true_reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"])* 255**2
-            output["reconstruction_loss"] = torch.Tensor([0]).to(self.device)
-            for i in range(N):
-                output["reconstruction_loss"] = output["reconstruction_loss"] + (alpha_t[i] / (1 - alpha_t[i])) * F.mse_loss(input["reconstruction_image"][i, :, :, :], input["image"][i, :, :, :]) * 255**2
-            output["reconstruction_loss"] = output["reconstruction_loss"] / N
+            # output["reconstruction_loss"] = torch.Tensor([0]).to(self.device)
+            # for i in range(N):
+            #     output["reconstruction_loss"] = output["reconstruction_loss"] + (alpha_t[i] / (1 - alpha_t[i])) * F.mse_loss(input["reconstruction_image"][i, :, :, :], input["image"][i, :, :, :]) * 255**2
+            # output["reconstruction_loss"] = output["reconstruction_loss"] / N
+            output["reconstruction_loss"] = F.mse_loss(z_t, noise)* 255**2
         else:
             output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"])* 255**2
         output["total_loss"] = output["bpp_loss"] + lamda * output["reconstruction_loss"]
@@ -1768,7 +1775,7 @@ class VICVBR3(ModelVBRCompressionBase):
             for s in range(self.levels):
                 for batch_id, inputs in enumerate(test_dataloader):
                     """ forward """
-                    output = self.forward(inputs, s = s, is_train = False)
+                    output = self.forward(inputs, s = s, is_train = True)
 
                     """ calculate loss """
                     out_criterion = self.compute_loss(output)
@@ -1846,76 +1853,4 @@ class VICVBR3(ModelVBRCompressionBase):
     #         "PSNR": psnrs,
     #         "bpp": bpps
     #     }
-
-class ModelDDPM(ModelDiffusionBase):
-    def __init__(
-        self,
-        width,
-        height,
-        channel = 3,
-        time_dim = 32, 
-        noise_steps = 500, 
-        beta_start = 1e-4, 
-        beta_end = 0.02,
-        device = "cuda"
-    ):
-        super().__init__(width, height, channel, time_dim, noise_steps, beta_start, beta_end, device)
-        self.predict_model = Unet(
-            width = self.width,
-            height = self.height, 
-            in_c = self.channel, 
-            out_c = self.channel, 
-            time_dim = self.time_dim
-        ).to(self.device)
-    
-    def sample(self, sample_num = 1, context = None, guide_w = 0.0):
-        self.eval()
-        with torch.no_grad():
-            x_i = torch.zeros(sample_num, self.channel, self.height, self.width).to(self.device)
-            for i in range(self.noise_steps, 1, -1): 
-                print(f'sampling timestep {i}',end='\r')
-
-                x_is = x_i.repeat(2,1,1,1)
-                t = torch.tensor([i]).repeat(sample_num).to(self.device)
-                t_is = t.repeat(2)
-                
-                context_s = context.repeat(2,1,1,1)
-                # z = torch.randn(sample_num, self.channel, self.height, self.width).to(self.device) if i > 1 else 0
-                
-                x_0 = self.predict_model(x_is, t_is, context_s)
-                x_01 = x_0[:sample_num]
-                x_02 = x_0[sample_num:]
-                
-                x_0 = (1+guide_w) * x_01 - guide_w * x_02
-                
-                z_t = (x_i - self.sqrtab[t, None, None, None] * x_0) / self.sqrtmab[t, None, None, None]
-                x_i = (
-                    self.sqrtab[t - 1, None, None, None] * x_0 + self.sqrtmab[t - 1, None, None, None] * z_t
-                )
-                # return x_0
-
-            x_i = torch.clamp(x_i, min = 0, max = 1)
-        return x_i
-
-    def forward(self, x, context):
-        _ts = torch.randint(1, self.noise_steps + 1, (x.shape[0],)).to(self.device)  # t ~ Uniform(0, n_T)
-        noise = torch.randn_like(x)  # eps ~ N(0, 1)
-
-        x_t = (
-            self.sqrtab[_ts, None, None, None] * x
-            + self.sqrtmab[_ts, None, None, None] * noise
-        )  
-        
-        x_0 = self.predict_model(x_t, _ts, context)
-        alphabar_t = self.alphabar_t[_ts]
-        return x_0, alphabar_t
-    
-if __name__ == '__main__':
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    batch = 2
-    unet = Unet(in_c=3,out_c=3,time_dim=32).to(device)
-    x = torch.randn(batch, 3, 720, 960).to(device)
-    t = torch.rand(batch).to(device)
-    output_t = unet(x,t)
-    print(output_t.shape)
 
