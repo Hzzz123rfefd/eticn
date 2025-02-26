@@ -632,26 +632,26 @@ class ModelDDPM(ModelDiffusionBase):
             for i in range(self.noise_steps, 1, -1): 
                 print(f'sampling timestep {i}',end='\r')
 
-                x_is = x_i.repeat(2,1,1,1)
+                x_i = x_i.repeat(2,1,1,1)
                 t = torch.tensor([i]).repeat(sample_num).to(self.device)
-                t_is = t.repeat(2)
+                t_i = t.repeat(2)
                 
                 context_s = context.repeat(2,1,1,1)
-                # z = torch.randn(sample_num, self.channel, self.height, self.width).to(self.device) if i > 1 else 0
+                z = torch.randn(sample_num, self.channel, self.height, self.width).to(self.device) if i > 1 else 0
                 
-                x_0 = self.predict_model(x_is, t_is, context_s)
-                x_01 = x_0[:sample_num]
-                x_02 = x_0[sample_num:]
+                eps = self.predict_model(x_i, t_i, context_s)
+                eps1 = eps[:sample_num]
+                eps2 = eps[sample_num:]
+                eps = (1+guide_w) * eps1 - guide_w * eps2
+                x_i = x_i[:sample_num]
                 
-                x_0 = (1+guide_w) * x_01 - guide_w * x_02
-                
-                z_t = (x_i - self.sqrtab[t, None, None, None] * x_0) / self.sqrtmab[t, None, None, None]
                 x_i = (
-                    self.sqrtab[t - 1, None, None, None] * x_0 + self.sqrtmab[t - 1, None, None, None] * z_t
+                    self.oneover_sqrta[i] * (x_i - eps * self.mab_over_sqrtmab[i])
+                    + self.sqrt_beta_t[i] * z
                 )
                 # return x_0
 
-            x_i = torch.clamp(x_i, min = 0, max = 1)
+            # x_i = torch.clamp(x_i, min = 0, max = 1)
         return x_i
 
     def forward(self, x, context):
