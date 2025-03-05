@@ -8,6 +8,7 @@ from abc import abstractmethod
 from tqdm import tqdm
 import torch.nn.functional as F
 from typing import cast
+from torchvision.utils import save_image
 
 from compressai.utils import *
 from compressai.entropy_models import *
@@ -651,7 +652,7 @@ class ModelDDPM(ModelDiffusionBase):
                 )
                 # return x_0
 
-            # x_i = torch.clamp(x_i, min = 0, max = 1)
+            x_i = torch.clamp(x_i, min = 0, max = 1)
         return x_i
 
     def forward(self, x, context):
