@@ -22,12 +22,12 @@ def configure_optimizers(net, lr):
     parameters = {
         n
         for n, p in net.named_parameters()
-        if not n.endswith(".quantiles") and p.requires_grad
+        if not n.endswith(".quantiles")
     }
     aux_parameters = {
         n
         for n, p in net.named_parameters()
-        if n.endswith(".quantiles") and p.requires_grad
+        if n.endswith(".quantiles")
     }
 
     # Make sure we don't have an intersection of parameters

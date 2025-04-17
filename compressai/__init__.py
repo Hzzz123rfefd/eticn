@@ -1,4 +1,4 @@
-from compressai.model import ETICN,ETICNVBR,VICVBR,VICVBR2,VICVBR3
+from compressai.model import ETICN,ETICNQVRF,VICQVRF,VICVBR2,VICVBR3
 from compressai.dataset import DatasetForETICN
 
 
@@ -8,8 +8,8 @@ datasets = {
 
 models = {
     "eticn":ETICN,
-    "eticnvbr":ETICNVBR,
-    "vicvbr": VICVBR,
+    "eticnqvrf":ETICNQVRF,
+    "vicvbr": VICQVRF,
     "vicvbr2": VICVBR2, 
     "vicvbr3": VICVBR3,
 }

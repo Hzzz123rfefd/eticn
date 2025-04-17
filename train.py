@@ -55,6 +55,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path",type=str,default = "config/vicvbr.yml")
+    parser.add_argument("--model_config_path",type=str,default = "config/eticnqvrf.yml")
     args = parser.parse_args()
     main(args)

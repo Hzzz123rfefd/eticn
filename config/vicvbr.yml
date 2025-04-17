@@ -9,7 +9,7 @@ model:
   image_height: 256
   out_channel_m: 192
   out_channel_n: 128
-  stage: 1
+  stage: 2
   device: cuda   
 
 # trainning args
