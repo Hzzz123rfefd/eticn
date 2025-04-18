@@ -239,43 +239,43 @@ class ETICN(ModelCompressionBase):
         true_labels = input["labels"]
         pre_labels = F.interpolate(input["logits"], scale_factor=16, mode='bicubic', align_corners=True)
         output["mask_loss"] = F.cross_entropy(pre_labels, true_labels)
-        
         output["total_loss"] =  output["total_loss"] + self.sigma * output["codebook_loss"] + self.beta * output["mask_loss"]
+        # print(f"mask_loss = {output['mask_loss']}, mask_loss = {output['mask_loss']}")
         return output
         
-    def eval_model(
-        self,
-        val_dataloader = None, 
-        log_path = None
-    ):
-        psnr = AverageMeter()
-        bpp = AverageMeter()
-        with torch.no_grad():
-            for batch_id,inputs in enumerate(val_dataloader):
-                b, c, h, w = inputs["image"].shape
-                output = self.forward(inputs)
-                bpp.update(
-                    sum(
-                        (torch.log(likelihoods).sum() / (-math.log(2) * b * h * w))
-                        for likelihoods in output["likelihoods"].values()
-                    )
-                )
-                for i in range(b):
-                    psnr.update(calculate_psnr(output["reconstruction_image"][i].cpu() * 255, inputs["image"][i].cpu() * 255))
+    # def eval_model(
+    #     self,
+    #     val_dataloader = None, 
+    #     log_path = None
+    # ):
+    #     psnr = AverageMeter()
+    #     bpp = AverageMeter()
+    #     with torch.no_grad():
+    #         for batch_id,inputs in enumerate(val_dataloader):
+    #             b, c, h, w = inputs["image"].shape
+    #             output = self.forward(inputs)
+    #             bpp.update(
+    #                 sum(
+    #                     (torch.log(likelihoods).sum() / (-math.log(2) * b * h * w))
+    #                     for likelihoods in output["likelihoods"].values()
+    #                 )
+    #             )
+    #             for i in range(b):
+    #                 psnr.update(calculate_psnr(output["reconstruction_image"][i].cpu() * 255, inputs["image"][i].cpu() * 255))
     
-        log_message = "PSNR = {:.4f}, BPP = {:.2f}\n".format(psnr.avg, bpp.avg)
-        print(log_message)
-        if log_path != None:
-            with open(log_path, "a") as file:
-                file.write(log_message+"\n")
+    #     log_message = "PSNR = {:.4f}, BPP = {:.2f}\n".format(psnr.avg, bpp.avg)
+    #     print(log_message)
+    #     if log_path != None:
+    #         with open(log_path, "a") as file:
+    #             file.write(log_message+"\n")
                 
-        output = {
-            "log_message":log_message,
-            "PSNR": psnr.avg,
-            "bpp": bpp.avg
-        }
+    #     output = {
+    #         "log_message":log_message,
+    #         "PSNR": psnr.avg,
+    #         "bpp": bpp.avg
+    #     }
         
-        return output
+    #     return output
 
 class ETICNQVRF(ModelVBRCompressionBase):
     def __init__(

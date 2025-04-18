@@ -24,7 +24,7 @@ model:
   sigma: 0.0001
   beta: 0.0001
   finetune_model_dir: null
-  university_pretrain_path: null
+  university_pretrain_path: camvid_64_512.npy
   device: cuda   
 
 # trainning args
@@ -51,5 +51,5 @@ dataset:
 
 
 logging:
-  eval_interval: 100             
-  save_dir: "./saved_model/eticn"   
+  eval_interval: 10           
+  save_dir: "./saved_model/eticn/"   
