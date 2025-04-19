@@ -14,8 +14,6 @@ def main(args):
     """ get model"""
     net = models[config["model_type"]](**config["model"])
     
-    net.save_pretrained("saved_model/eticn/")
-    
     net.load_pretrained(
         save_model_dir = args.model_path,
         lamda = args.lamda
@@ -36,7 +34,7 @@ def main(args):
         collate_fn = dataset.collate_fn
     )
     
-    net.eval_epoch(epoch = 0, val_dataloader = dataloader, log_path = None)
+    net.eval_epoch(val_dataloader = dataloader, log_path = None)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

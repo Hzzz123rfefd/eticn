@@ -58,6 +58,7 @@ class ETICN(ModelCompressionBase):
             (int)(self.image_shape[1]/patch_size/8),
             (int)(self.image_shape[2]/patch_size/8)
         ]
+        
         self.image_transform_encoder = Encoder(
             image_shape = self.image_shape,
             patch_size = self.patch_size,
@@ -96,7 +97,6 @@ class ETICN(ModelCompressionBase):
             nn.LeakyReLU(inplace=True),
             conv(out_channel_m * 3 // 2, out_channel_m * 2, kernel_size=3,stride = 1)
         ).to(self.device)
-
 
         self.universal_context = UniversalContext(
             out_channel_m = self.out_channel_m,

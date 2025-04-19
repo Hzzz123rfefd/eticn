@@ -10,7 +10,7 @@ def main(args):
 
     """ get net struction"""
     net = models[config["model_type"]](**config["model"])
-
+    
     """get data loader"""
     train_datasets = datasets[config["dataset_type"]](**config["dataset"], data_type = "train")
     test_datasets = datasets[config["dataset_type"]](**config["dataset"], data_type = "test")
