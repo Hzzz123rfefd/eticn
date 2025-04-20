@@ -39,8 +39,8 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_config_path", type=str, default = "config/eticn.yml")
-    parser.add_argument("--data_path", type=str, default = "camvid_train/train.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/eticn/")
-    parser.add_argument("--lamda", type=str, default = 0.0002)
+    parser.add_argument("--data_path", type=str, default = "camvid_train/test.jsonl")
+    parser.add_argument("--model_path", type=str, default = "saved_model/")
+    parser.add_argument("--lamda", type=str, default = 0.0001)
     args = parser.parse_args()
     main(args)

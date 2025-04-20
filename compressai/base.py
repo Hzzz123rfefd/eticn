@@ -262,9 +262,9 @@ class ModelCompressionBase(ModelBase):
             (torch.log(likelihoods).sum() / (-math.log(2) * num_pixels))
             for likelihoods in input["likelihoods"].values()
         )
-        # output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"]) * 255**2
-        output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"])
-        output["total_loss"] = lamda * output["bpp_loss"] + output["reconstruction_loss"]
+        output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"]) * 255**2
+        # output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"])
+        output["total_loss"] = output["bpp_loss"] + lamda *output["reconstruction_loss"]
         # print(f"reconstruction_loss = {output['reconstruction_loss']}, bpp_loss = {output['bpp_loss']}")
         return output
     
@@ -568,7 +568,7 @@ class ModelVBRCompressionBase(ModelCompressionBase):
 
         log_message = ""
         for index, lamda in enumerate(self.lmbda):
-            log_message = log_message + f"lamda = {lamda}, s = {index}, stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
+            log_message = log_message + f"lamda = {lamda}, s = {index}, scale: {self.Gain.data[index].cpu().numpy():0.4f},   stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
             
         print(log_message)
         if log_path != None:
@@ -582,10 +582,10 @@ class ModelVBRCompressionBase(ModelCompressionBase):
         }
 
     def load_pretrained(self, save_model_dir):
-        self.load_state_dict(torch.load(save_model_dir))
+        self.load_state_dict(torch.load(save_model_dir + "/model.pth"))
 
     def save_pretrained(self, save_model_dir):
-        torch.save(self.state_dict(), save_model_dir)
+        torch.save(self.state_dict(), save_model_dir + "/model.pth")
         
 class ModelDiffusionBase(ModelBase):
     def __init__(
