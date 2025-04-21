@@ -264,7 +264,7 @@ class ModelCompressionBase(ModelBase):
         )
         output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"]) * 255**2
         # output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"])
-        output["total_loss"] = output["bpp_loss"] + lamda *output["reconstruction_loss"]
+        output["total_loss"] = output["bpp_loss"] + lamda * output["reconstruction_loss"]
         # print(f"reconstruction_loss = {output['reconstruction_loss']}, bpp_loss = {output['bpp_loss']}")
         return output
     
@@ -326,7 +326,7 @@ class ModelCompressionBase(ModelBase):
                 lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
                 best_loss = checkpoint["loss"]
                 last_epoch = checkpoint["epoch"] + 1
-                # optimizer.param_groups[0]['lr'] = 0.0001
+                optimizer.param_groups[0]['lr'] = 0.0001
 
             try:
                 for epoch in range(last_epoch, total_epoch):
@@ -334,7 +334,7 @@ class ModelCompressionBase(ModelBase):
                     self.train_one_epoch(epoch,train_dataloader, optimizer,clip_max_norm, aux_optimizer, log_path)
                     test_loss = self.test_epoch(epoch,test_dataloader,log_path)
                     loss = test_loss
-                    lr_scheduler.step(loss)
+                    lr_scheduler.step(l                                                                                                                                                                                                                                                                                                                                                                  oss)
                     is_best = loss < best_loss
                     best_loss = min(loss, best_loss)
                     torch.save(                
@@ -568,7 +568,7 @@ class ModelVBRCompressionBase(ModelCompressionBase):
 
         log_message = ""
         for index, lamda in enumerate(self.lmbda):
-            log_message = log_message + f"lamda = {lamda}, s = {index}, scale: {self.Gain.data[index].cpu().numpy():0.4f},   stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
+            log_message = log_message + f"lamda = {lamda}, s = {index}, scale: {self.Gain.data[index].cpu().numpy():0.4f}, stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
             
         print(log_message)
         if log_path != None:

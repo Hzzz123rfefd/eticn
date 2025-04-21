@@ -398,7 +398,7 @@ class ETICNQVRF(ModelVBRCompressionBase):
         ).to(self.device)
 
         self.Gain = torch.nn.Parameter(torch.tensor(
-            [1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]), requires_grad=True).to(self.device)
+            [1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]), requires_grad=True)
         
     def forward(self, inputs, s = 1, is_train = True):
         image = inputs["image"].to(self.device)
@@ -456,7 +456,7 @@ class ETICNQVRF(ModelVBRCompressionBase):
             scales_hat2, means_hat2 = gaussian_params2.chunk(2, 1)
             scales_hat = scales_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + scales_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
             means_hat = means_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + means_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
-            _,y_likelihoods = self.gaussian_conditional(y * scale, scales_hat * scale, means_hat * scale)
+            _,y_likelihoods = self.gaussian_conditional(y * scale - means_hat * scale, scales_hat * scale)
         
             """ inverse transformation"""
             x_hat = self.image_transform_decoder(y_hat)
@@ -590,7 +590,7 @@ class VICQVRF(ModelVBRCompressionBase):
         self.quantizer = Quantizer()
         
         self.Gain = torch.nn.Parameter(torch.tensor(
-            [1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]), requires_grad=True)
+            [1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]), requires_grad = True)
 
     @property
     def downsampling_factor(self) -> int:
