@@ -521,7 +521,7 @@ class ModelVBRCompressionBase(ModelCompressionBase):
 
     def test_epoch(self, epoch, test_dataloader, log_path = None):
         total_loss = AverageMeter()
-        self.eval()
+        # self.eval()
         self.to(self.device)
         with torch.no_grad():
             for s in range(self.levels):
@@ -707,4 +707,25 @@ class ModelDDPM(ModelDiffusionBase):
         x_0 = (x_t - self.sqrtmab[_ts, None, None, None] * z_t) / self.sqrtab[_ts, None, None, None]
         alphabar_t = self.alphabar_t[_ts]
         return x_0, alphabar_t, z_t, noise
-    
+
+class FC:
+    def __init__(self):
+        self.predict_model = Unet(
+            width = self.width,
+            height = self.height, 
+            in_c = self.channel, 
+            out_c = self.channel, 
+            time_dim = self.time_dim
+        ).to(self.device)
+       
+    def forward(self, y_hat, noisy, n):
+        
+        # 预测误差
+        predict_noisy = self.predict_model(y_hat, n)
+           
+        # 还原为量化之前
+        y_0 = y_hat - predict_noisy / self.Gain[:, n]
+        
+        return y_0, predict_noisy
+        
+           

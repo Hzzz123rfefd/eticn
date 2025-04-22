@@ -6,7 +6,7 @@ from compressai.utils import load_config
 import argparse
 config = load_config("config/eticncqvr.yml")
 model = models[config["model_type"]](**config["model"])
-checkpoint = torch.load('saved_model/eticn/0.0001/model.pth', map_location="cuda")
+checkpoint = torch.load('saved_model/eticncqvr/model.pth', map_location="cuda")
 model.load_state_dict(checkpoint, strict=False)
 model.save_pretrained("saved_model/")
 

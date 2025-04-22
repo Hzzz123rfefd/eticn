@@ -12,7 +12,7 @@ def main(args):
     config = load_config(args.model_config_path)
 
     """ get model"""
-    net = models[config["model_type"]](**config["model"])
+    net = models[config["model_type"]](**config["model"]).to(config["model"]["device"])
     
     net.load_pretrained(
         save_model_dir = args.model_path,
@@ -33,13 +33,12 @@ def main(args):
         collate_fn = dataset.collate_fn
     )
     
-    net.eval_model(epoch = 0, val_dataloader = dataloader, log_path = None)
+    net.eval_epoch(val_dataloader = dataloader, log_path = None)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/eticn.yml")
-    parser.add_argument("--data_path", type=str, default = "camvid_train/train.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/")
-    parser.add_argument("--lamda", type=str, default = 0.0002)
+    parser.add_argument("--model_config_path", type=str, default = "config/eticncqvr.yml")
+    parser.add_argument("--data_path", type=str, default = "camvid_train/test.jsonl")
+    parser.add_argument("--model_path", type=str, default = "saved_model/eticncqvr")
     args = parser.parse_args()
     main(args)

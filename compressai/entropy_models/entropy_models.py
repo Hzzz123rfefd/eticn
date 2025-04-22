@@ -124,7 +124,7 @@ class EntropyModel(nn.Module):
     forward: Callable[..., Any] = _forward
 
     def quantize(
-        self, inputs: Tensor, mode: str, means: Optional[Tensor] = None
+        self, inputs: Tensor, mode: str, means: Optional[Tensor] = None, return_noisy = False
     ) -> Tensor:
         if mode not in ("noise", "dequantize", "symbols"):
             raise ValueError(f'Invalid quantization mode: "{mode}"')
@@ -132,6 +132,8 @@ class EntropyModel(nn.Module):
             half = float(0.5)
             noise = torch.empty_like(inputs).uniform_(-half, half)
             inputs = inputs + noise
+            if return_noisy == True:
+                return inputs, noise
             return inputs
 
         outputs = inputs.clone()

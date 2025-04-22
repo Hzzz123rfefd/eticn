@@ -315,6 +315,7 @@ class ETICNCQVR(ModelVBRCompressionBase):
         codebook_size,
         transfomer_head,
         transfomer_blocks,
+        time_dim = 32,
         drop_prob = 0.1,
         stage = 1,
         sigma = 0.0001,
@@ -335,6 +336,7 @@ class ETICNCQVR(ModelVBRCompressionBase):
         self.codebook_size = codebook_size
         self.transfomer_head = transfomer_head
         self.transfomer_blocks = transfomer_blocks
+        self.time_dim = time_dim
         self.drop_prob = drop_prob
         self.feather_shape = [
             embedding_dim*8,
@@ -421,13 +423,26 @@ class ETICNCQVR(ModelVBRCompressionBase):
         self.Gain = torch.nn.Parameter(torch.tensor(
              [[1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]] * self.out_channel_m, dtype=torch.float32), requires_grad=True)
         
+        self.predict_model = Unet(
+            width = (int)(self.image_weight / 16), 
+            height = (int)(self.image_height / 16), 
+            in_c = self.out_channel_m, 
+            out_c = self.out_channel_m, 
+            time_dim = self.time_dim
+        ).to(self.device)
+        
     def forward(self, inputs, s = 1, is_train = True):
         image = inputs["image"].to(self.device)
+        b, c, h, w = image.shape
         if is_train == True:
             if self.stage > 1:
-                s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+                s = random.randint(0, self.levels - 1)
                 if s != 0:
-                    scale = torch.max(self.Gain[:, s], torch.tensor(1e-4)) + 1e-9
+                    if self.stage == 2:
+                        scale = torch.max(self.Gain[:, s], torch.tensor(1e-4)) + 1e-9
+                    else:
+                        scale = torch.max(self.Gain[:, s], torch.tensor(1e-4)) + 1e-9
+                        scale = scale.detach().clone()
                 else:
                     s = 0
                     scale = self.Gain[:, s].detach().clone()
@@ -438,8 +453,8 @@ class ETICNCQVR(ModelVBRCompressionBase):
             scale = self.Gain[:, s]
         scale = scale.unsqueeze(0).unsqueeze(2).unsqueeze(3)
         rescale = 1.0 / scale.clone().detach()
-
-        if self.stage <= 2:
+        
+        if self.stage <= 3:
             """ get latent vector """
             y, mid_feather = self.image_transform_encoder(image)
         
@@ -456,8 +471,18 @@ class ETICNCQVR(ModelVBRCompressionBase):
             z = self.hyperpriori_encoder(y)
             z_hat, z_likelihoods = self.entropy_bottleneck(z)
             side_ctx = self.side_context(z_hat)
-        
-            y_hat = self.gaussian_conditional.quantize(y * scale, "noise" if self.training else "dequantize") * rescale
+
+            if self.stage != 3:
+                y_hat = self.gaussian_conditional.quantize(y * scale, "noise" if self.training else "dequantize") * rescale
+                noisy = None
+                predict_noisy = None
+            else:
+                y_hat, noisy = self.gaussian_conditional.quantize(y * scale, "noise" if self.training else "dequantize", return_noisy = True)
+                y_hat = y_hat * rescale
+                t = torch.ones((b)) * (self.levels - s)
+                t = t.to(self.device)
+                predict_noisy = self.predict_model(y_hat, t)
+                y_hat = y_hat - predict_noisy * rescale
             
             """ get local message """
             local_ctx = self.local_context(y_hat)
@@ -478,11 +503,11 @@ class ETICNCQVR(ModelVBRCompressionBase):
             scales_hat2, means_hat2 = gaussian_params2.chunk(2, 1)
             scales_hat = scales_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + scales_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
             means_hat = means_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + means_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
-            _,y_likelihoods = self.gaussian_conditional(y * scale - means_hat1 * scale, scales_hat1 * scale)
+            _,y_likelihoods = self.gaussian_conditional(y * scale - means_hat * scale, scales_hat * scale)
         
             """ inverse transformation"""
             x_hat = self.image_transform_decoder(y_hat)
-            # x_hat = torch.clamp(x_hat, 0, 1)
+        x_hat = torch.clamp(x_hat, 0, 1)
 
         """ output """
         """
@@ -503,6 +528,8 @@ class ETICNCQVR(ModelVBRCompressionBase):
             "mask":mask,
             "latent":y,
             "labels":inputs["label"].long().to(self.device) if "label" in inputs else None,
+            "noisy": noisy,
+            "predict_noisy": predict_noisy,
             "lamda": self.lmbda[s]
         }
         return output
@@ -518,6 +545,11 @@ class ETICNCQVR(ModelVBRCompressionBase):
         output["mask_loss"] = F.cross_entropy(pre_labels, true_labels)
         
         output["total_loss"] =  output["total_loss"] + self.sigma * output["codebook_loss"] + self.beta * output["mask_loss"]
+        
+        if self.stage == 3 and self.training:
+            output["noisy_loss"] = F.mse_loss(input["noisy"], input["predict_noisy"])
+            output["total_loss"] = output["total_loss"] + output["noisy_loss"]
+        
         return output
 
     def trainning(            
@@ -723,7 +755,7 @@ class ETICNQVRF(ModelVBRCompressionBase):
             scales_hat2, means_hat2 = gaussian_params2.chunk(2, 1)
             scales_hat = scales_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + scales_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
             means_hat = means_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + means_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
-            _,y_likelihoods = self.gaussian_conditional(y * scale - means_hat1 * scale, scales_hat1 * scale)
+            _,y_likelihoods = self.gaussian_conditional(y * scale - means_hat * scale, scales_hat * scale)
         
             """ inverse transformation"""
             x_hat = self.image_transform_decoder(y_hat)
