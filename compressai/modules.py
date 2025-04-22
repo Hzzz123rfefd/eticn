@@ -18,7 +18,7 @@ class Quantizer():
             return torch.round(inputs)
 
 class Encoder(nn.Module):
-    def __init__(self,image_shape,patch_size,embed_dim,window_size,head_num,shift_size,out_channel_m):
+    def __init__(self, image_shape, patch_size, embed_dim, window_size, head_num, shift_size, out_channel_m):
         super(Encoder, self).__init__()
         self.image_shape = image_shape
         self.patch_size = patch_size

@@ -333,8 +333,7 @@ class ModelCompressionBase(ModelBase):
                     print(f"Learning rate: {optimizer.param_groups[0]['lr']}")
                     self.train_one_epoch(epoch,train_dataloader, optimizer,clip_max_norm, aux_optimizer, log_path)
                     test_loss = self.test_epoch(epoch,test_dataloader,log_path)
-                    loss = test_loss
-                    lr_scheduler.step(l                                                                                                                                                                                                                                                                                                                                                                  oss)
+                    loss = test_loss                                                                                                                                                                                                                                                                                                                                                    
                     is_best = loss < best_loss
                     best_loss = min(loss, best_loss)
                     torch.save(                
@@ -554,7 +553,7 @@ class ModelVBRCompressionBase(ModelCompressionBase):
             for batch_id, inputs in enumerate(val_dataloader):
                 b, c, h, w = inputs["image"].shape
                 for s in range(self.levels):
-                    output = self.forward(inputs = inputs, s = s, is_train = True)
+                    output = self.forward(inputs = inputs, s = s, is_train = False)
                     
                     bpps[s].update(
                         sum(
@@ -568,8 +567,8 @@ class ModelVBRCompressionBase(ModelCompressionBase):
 
         log_message = ""
         for index, lamda in enumerate(self.lmbda):
-            log_message = log_message + f"lamda = {lamda}, s = {index}, scale: {self.Gain.data[index].cpu().numpy():0.4f}, stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
-            
+            log_message = log_message + f"lamda = {lamda}, s = {index}, stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
+            # log_message = log_message + f"lamda = {lamda}, s = {index}, scale: {self.Gain.data[index].cpu().numpy():0.4f}, stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
         print(log_message)
         if log_path != None:
             with open(log_path, "a") as file:

@@ -1,7 +1,7 @@
 # config.yml
 
 model_type:
-  eticnqvrf
+  eticncqvr
 # mdoel args
 model:        
   image_channel: 3
@@ -19,7 +19,7 @@ model:
   transfomer_head: 2
   transfomer_blocks: 3
   drop_prob: 0.1
-  stage: 2
+  stage: 1
   sigma: 0
   beta: 0
   university_pretrain_path: "camvid_64_512.npy"
@@ -50,4 +50,4 @@ dataset:
 
 logging:
   eval_interval: 10        
-  save_dir: "./saved_model/eticnqvrf"   
+  save_dir: "./saved_model/eticncqvr"   
