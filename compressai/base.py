@@ -325,7 +325,8 @@ class ModelCompressionBase(ModelBase):
                 aux_optimizer.load_state_dict(checkpoint["aux_optimizer"])
                 lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
                 best_loss = checkpoint["loss"]
-                last_epoch = checkpoint["epoch"] + 1
+                # checkpoint["epoch"] = 0
+                last_epoch = checkpoint["epoch"]
                 optimizer.param_groups[0]['lr'] = 0.0001
 
             try:
