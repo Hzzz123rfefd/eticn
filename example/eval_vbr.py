@@ -33,7 +33,7 @@ def main(args):
         collate_fn = dataset.collate_fn
     )
     
-    net.eval_epoch(val_dataloader = dataloader, log_path = None)
+    net.eval_model(val_dataloader = dataloader)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

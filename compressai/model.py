@@ -4,10 +4,9 @@ import torch
 import torch.nn as nn
 import math
 import numpy as np
-
 from compressai.ops import ste_round
 from compressai.entropy_models import *
-from compressai.utils import AverageMeter,clip_gradient
+# from compressai.utils import AverageMeter,clip_gradient
 from compressai.modules import *
 from compressai.layers import *
 from compressai.base import *
@@ -1027,7 +1026,7 @@ class VICQVRF(ModelVBRCompressionBase):
             }
         return output
 
-    def eval_epoch(
+    def eval_model(
         self,
         val_dataloader = None, 
         log_path = None
@@ -1385,7 +1384,7 @@ class VICVBR3(ModelVBRCompressionBase):
         output["total_loss"] = output["bpp_loss"] + lamda * output["reconstruction_loss"]
         return output
     
-    def test_epoch(self, epoch, test_dataloader, log_path = None):
+    def test_one_epoch(self, epoch, test_dataloader, log_path = None):
         total_loss = AverageMeter()
         self.eval()
         self.to(self.device)

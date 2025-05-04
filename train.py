@@ -1,7 +1,6 @@
 from torch.utils.data import DataLoader
 from compressai import models,datasets
 from compressai.utils import load_config
-
 import argparse
 
 
@@ -9,7 +8,7 @@ def main(args):
     config = load_config(args.model_config_path)
 
     """ get net struction"""
-    net = models[config["model_type"]](**config["model"])
+    net = models[config["model_type"]](**config["model"]).to("cuda")
     
     """get data loader"""
     train_datasets = datasets[config["dataset_type"]](**config["dataset"], data_type = "train")
@@ -55,6 +54,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path",type=str,default = "config/eticncqvr.yml")
+    parser.add_argument("--model_config_path",type=str,default = "config/eticn.yml")
     args = parser.parse_args()
     main(args)

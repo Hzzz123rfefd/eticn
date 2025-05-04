@@ -1,231 +1,17 @@
 import math
 import torch
 from torch.utils.data import DataLoader
-import torch.nn as nn
 import os
 from torch import optim
 from abc import abstractmethod
 from tqdm import tqdm
 import torch.nn.functional as F
 from typing import cast
-from torchvision.utils import save_image
 
 from compressai.utils import *
 from compressai.entropy_models import *
 from compressai.modules import *
-
-
-def configure_optimizers(net, lr):
-    """Separate parameters for the main optimizer and the auxiliary optimizer.
-    Return two optimizers"""
-
-    parameters = {
-        n
-        for n, p in net.named_parameters()
-        if not n.endswith(".quantiles")
-    }
-    aux_parameters = {
-        n
-        for n, p in net.named_parameters()
-        if n.endswith(".quantiles")
-    }
-
-    # Make sure we don't have an intersection of parameters
-    params_dict = dict(net.named_parameters())
-    inter_params = parameters & aux_parameters
-    union_params = parameters | aux_parameters
-
-    assert len(inter_params) == 0
-    assert len(union_params) - len(params_dict.keys()) == 0
-
-    optimizer = optim.Adam(
-        (params_dict[n] for n in sorted(parameters)),
-        lr = lr,
-    )
-    aux_optimizer = optim.Adam(
-        (params_dict[n] for n in sorted(aux_parameters)),
-        lr = 0.001,
-    )
-    return optimizer, aux_optimizer
-
-class ModelBase(nn.Module):
-    def __init__(
-        self,
-        device = "cuda"
-    ):
-        super().__init__()
-        self.device = device if torch.cuda.is_available() else "cpu"
-    
-    def trainning(
-            self,
-            train_dataloader: DataLoader = None,
-            test_dataloader: DataLoader = None,
-            val_dataloader: DataLoader = None,
-            optimizer_name:str = "Adam",
-            weight_decay:float = 0,
-            clip_max_norm:float = 0.5,
-            factor:float = 0.3,
-            patience:int = 15,
-            lr:float = 1e-4,
-            total_epoch:int = 1000,
-            eval_interval:int = 10,
-            save_model_dir:str = None
-        ):
-            self.to(self.device)
-            ## 1 trainning log path 
-            first_trainning = True
-            check_point_path = save_model_dir  + "/checkpoint.pth"
-            log_path = save_model_dir + "/train.log"
-
-            ## 2 get net pretrain parameters if need 
-            if  os.path.isdir(save_model_dir) and os.path.exists(check_point_path) and os.path.exists(log_path):
-                self.load_pretrained(save_model_dir)  
-                first_trainning = False
-
-            else:
-                if not os.path.isdir(save_model_dir):
-                    os.makedirs(save_model_dir)
-                with open(log_path, "w") as file:
-                    pass
-
-            ##  3 get optimizer
-            if optimizer_name == "Adam":
-                optimizer = optim.Adam(self.parameters(), lr, weight_decay = weight_decay)
-            elif optimizer_name == "AdamW":
-                optimizer = optim.AdamW(self.parameters(), lr, weight_decay = weight_decay)
-            else:
-                optimizer = optim.Adam(self.parameters(), lr, weight_decay = weight_decay)
-                
-            lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer = optimizer, 
-                mode = "min", 
-                factor = factor, 
-                patience = patience
-            )
-
-            ## 4 init trainng log
-            if first_trainning:
-                best_loss = float("inf")
-                last_epoch = 0
-            else:
-                checkpoint = torch.load(check_point_path, map_location=self.device)
-                optimizer.load_state_dict(checkpoint["optimizer"])
-                lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
-                best_loss = checkpoint["loss"]
-                last_epoch = checkpoint["epoch"] + 1
-                # optimizer.param_groups[0]['lr'] = 0.0001
-
-            try:
-                for epoch in range(last_epoch, total_epoch):
-                    print(f"Learning rate: {optimizer.param_groups[0]['lr']}")
-                    train_loss = self.train_one_epoch(epoch,train_dataloader, optimizer,clip_max_norm, log_path)
-                    test_loss = self.test_epoch(epoch,test_dataloader,log_path)
-                    loss = test_loss + train_loss
-                    lr_scheduler.step(loss)
-                    is_best = loss < best_loss
-                    best_loss = min(loss, best_loss)
-                    torch.save(                
-                        {
-                            "epoch": epoch,
-                            "loss": loss,
-                            "optimizer": None,
-                            "lr_scheduler": None
-                        },
-                        check_point_path
-                    )
-                    if epoch % eval_interval == 0:
-                        self.eval_epoch(val_dataloader, log_path)
-                    
-                    if is_best:
-                        self.save_pretrained(save_model_dir)
-
-            # interrupt trianning
-            except KeyboardInterrupt:
-                    torch.save(                
-                        {
-                            "epoch": epoch,
-                            "loss": loss,
-                            "optimizer": optimizer.state_dict(),
-                            "lr_scheduler": lr_scheduler.state_dict()
-                        },
-                        check_point_path
-                    )
-    
-    def train_one_epoch(self, epoch, train_dataloader, optimizer, clip_max_norm, log_path = None):
-        self.train().to(self.device)
-        pbar = tqdm(train_dataloader,desc="Processing epoch "+str(epoch), unit="batch")
-        total_loss = AverageMeter()
-        
-        for batch_id, inputs in enumerate(train_dataloader):
-            """ grad zeroing """
-            optimizer.zero_grad()
-
-            """ forward """
-            used_memory = 0 if self.device != "cuda" else torch.cuda.memory_allocated(torch.cuda.current_device()) / (1024 ** 3)  
-            output = self.forward(inputs)
-
-            """ calculate loss """
-            out_criterion = self.compute_loss(output)
-            out_criterion["total_loss"].backward()
-            total_loss.update(out_criterion["total_loss"].item())
-
-            """ grad clip """
-            if clip_max_norm > 0:
-                torch.nn.utils.clip_grad_norm_(self.parameters(), clip_max_norm)
-
-            """ modify parameters """
-            optimizer.step()
-            after_used_memory = 0 if self.device != "cuda" else torch.cuda.memory_allocated(torch.cuda.current_device()) / (1024 ** 3) 
-            postfix_str = "Train Epoch: {:d}, total_loss: {:.4f}, use_memory: {:.1f}G".format(
-                epoch,
-                total_loss.avg, 
-                after_used_memory - used_memory
-            )
-            pbar.set_postfix_str(postfix_str)
-            pbar.update()
-            
-        with open(log_path, "a") as file:
-            file.write(postfix_str+"\n")
-
-        return total_loss.avg
-
-    def test_epoch(self, epoch, test_dataloader, log_path = None):
-        total_loss = AverageMeter()
-        self.eval()
-        self.to(self.device)
-        with torch.no_grad():
-            for batch_id, inputs in enumerate(test_dataloader):
-                """ forward """
-                output = self.forward(inputs)
-
-                """ calculate loss """
-                out_criterion = self.compute_loss(output)
-                total_loss.update(out_criterion["total_loss"].item())
-
-            str = "Test Epoch: {:d}, total_loss: {:.4f}".format(
-                epoch,
-                total_loss.avg, 
-            )
-        print(str)
-        with open(log_path, "a") as file:
-            file.write(str+"\n")
-        return total_loss.avg
-    
-    @abstractmethod
-    def eval_epoch(self, val_dataloader = None, log_path = None):
-        pass
-        
-    @abstractmethod    
-    def compute_loss(self, input):
-        pass
-    
-    @abstractmethod
-    def load_pretrained(self, save_model_dir):
-        pass
-
-    @abstractmethod
-    def save_pretrained(self, save_model_dir):
-        pass
+from third_party.DL_Pipeline.src.model import ModelBase
 
 class ModelCompressionBase(ModelBase):
     def __init__(
@@ -263,118 +49,114 @@ class ModelCompressionBase(ModelBase):
             for likelihoods in input["likelihoods"].values()
         )
         output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"]) * 255**2
-        # output["reconstruction_loss"] = F.mse_loss(input["reconstruction_image"], input["image"])
         output["total_loss"] = output["bpp_loss"] + lamda * output["reconstruction_loss"]
-        # print(f"reconstruction_loss = {output['reconstruction_loss']}, bpp_loss = {output['bpp_loss']}")
         return output
-    
-    def trainning(            
-            self,
-            train_dataloader: DataLoader = None,
-            test_dataloader: DataLoader = None,
-            val_dataloader: DataLoader = None,
-            optimizer_name:str = "Adam",
-            weight_decay:float = 0,
-            clip_max_norm:float = 0.5,
-            factor:float = 0.3,
-            patience:int = 15,
-            lr:float = 1e-4,
-            total_epoch:int = 1000,
-            eval_interval:int = 10,
-            save_model_dir:str = None
-        ):
-            if self.lamda != None:
-                save_model_dir = save_model_dir  + "/" + str(self.lamda)
-            if self.finetune_model_dir:
-                self.load_pretrained(self.finetune_model_dir)
-                
-            self.to(self.device)
-            ## 1 trainning log path 
-            first_trainning = True
-            check_point_path = save_model_dir  + "/checkpoint.pth"
-            log_path = save_model_dir + "/train.log"
 
-            ## 2 get net pretrain parameters if need 
-            if  os.path.isdir(save_model_dir) and os.path.exists(check_point_path) and os.path.exists(log_path):
-                self.load_pretrained(save_model_dir)  
-                first_trainning = False
+    def configure_optimizers(self, optimizer_name, lr, weight_decay):
+        parameters = {
+            n
+            for n, p in self.named_parameters()
+            if not n.endswith(".quantiles")
+        }
+        aux_parameters = {
+            n
+            for n, p in self.named_parameters()
+            if n.endswith(".quantiles")
+        }
 
-            else:
-                if not os.path.isdir(save_model_dir):
-                    os.makedirs(save_model_dir)
-                with open(log_path, "w") as file:
-                    pass
+        # Make sure we don't have an intersection of parameters
+        params_dict = dict(self.named_parameters())
+        inter_params = parameters & aux_parameters
+        union_params = parameters | aux_parameters
 
-            ##  3 get optimizer
-            optimizer, aux_optimizer = configure_optimizers(self, lr)
+        assert len(inter_params) == 0
+        assert len(union_params) - len(params_dict.keys()) == 0
+
+        if optimizer_name == "Adam":
+            self.optimizer = optim.Adam(
+                (params_dict[n] for n in sorted(parameters)),
+                lr = lr,
+            )
+            self.aux_optimizer = optim.Adam(
+                (params_dict[n] for n in sorted(aux_parameters)),
+                lr = 0.001,
+            )
             
-            lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer = optimizer, 
-                mode = "min", 
-                factor = factor, 
-                patience = patience
+        elif optimizer_name == "AdamW":
+            self.optimizer = optim.AdamW(
+                (params_dict[n] for n in sorted(parameters)),
+                lr = lr,
+            )
+            self.aux_optimizer = optim.AdamW(
+                (params_dict[n] for n in sorted(aux_parameters)),
+                lr = 0.001,
+            )
+            
+        else:
+            self.optimizer = optim.Adam(
+                (params_dict[n] for n in sorted(parameters)),
+                lr = lr,
+            )
+            self.aux_optimizer = optim.Adam(
+                (params_dict[n] for n in sorted(aux_parameters)),
+                lr = 0.001,
             )
 
-            ## 4 init trainng log
-            if first_trainning:
-                best_loss = float("inf")
-                last_epoch = 0
-            else:
-                checkpoint = torch.load(check_point_path, map_location = self.device)
-                optimizer.load_state_dict(checkpoint["optimizer"])
-                aux_optimizer.load_state_dict(checkpoint["aux_optimizer"])
-                lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
-                best_loss = checkpoint["loss"]
-                # checkpoint["epoch"] = 0
-                last_epoch = checkpoint["epoch"]
-                optimizer.param_groups[0]['lr'] = 0.0001
-
-            try:
-                for epoch in range(last_epoch, total_epoch):
-                    print(f"Learning rate: {optimizer.param_groups[0]['lr']}")
-                    self.train_one_epoch(epoch,train_dataloader, optimizer,clip_max_norm, aux_optimizer, log_path)
-                    test_loss = self.test_epoch(epoch,test_dataloader,log_path)
-                    loss = test_loss                                                                                                                                                                                                                                                                                                                                                    
-                    is_best = loss < best_loss
-                    best_loss = min(loss, best_loss)
-                    torch.save(                
-                        {
-                            "epoch": epoch,
-                            "loss": loss,
-                            "optimizer": None,
-                            "aux_optimizer": None,
-                            "lr_scheduler": None
-                        },
-                        check_point_path
-                    )
-                    if epoch % eval_interval == 0:
-                        self.eval_epoch(val_dataloader, log_path)
-                    
-                    if is_best:
-                        self.save_pretrained(save_model_dir)
-
-            # interrupt trianning
-            except KeyboardInterrupt:
-                    torch.save(                
-                        {
-                            "epoch": epoch,
-                            "loss": loss,
-                            "optimizer": optimizer.state_dict(),
-                            "aux_optimizer": aux_optimizer.state_dict(),
-                            "lr_scheduler": lr_scheduler.state_dict()
-                        },
-                        check_point_path
-                    )
-
-    def train_one_epoch(self, epoch, train_dataloader, optimizer, clip_max_norm, aux_optimizer = None, log_path = None):
+    def configure_train_set(self, save_model_dir):
+        if self.lamda != None:
+            self.save_model_dir = save_model_dir  + "/" + str(self.lamda)
+        else:
+            self.save_model_dir = save_model_dir
+        self.first_trainning = True
+        self.check_point_path = self.save_model_dir  + "/checkpoint.pth"
+        self.log_path = self.save_model_dir + "/train.log"
+        
+    def init_model(self):
+        if  os.path.isdir(self.save_model_dir) and os.path.exists(self.check_point_path) and os.path.exists(self.log_path):
+            self.load_pretrained(self.save_model_dir)  
+            self.first_trainning = False
+        else:
+            os.makedirs(self.save_model_dir, exist_ok = True)
+            with open(self.log_path, "w") as f:
+                pass  
+            self.first_trainning = True
+            if self.finetune_model_dir:
+                self.load_pretrained(self.finetune_model_dir)
+    
+    def configure_train_log(self):
+        if self.first_trainning:
+            self.best_loss = float("inf")
+            self.last_epoch = 0
+        else:
+            checkpoint = torch.load(self.check_point_path, map_location = self.device)
+            self.optimizer.load_state_dict(checkpoint["optimizer"])
+            self.aux_optimizer.load_state_dict(checkpoint["aux_optimizer"])
+            self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+            self.best_loss = checkpoint["loss"]
+            self.last_epoch = checkpoint["epoch"]
+            # self.last_epoch = 145
+    
+    def save_train_log(self):
+        torch.save({
+                "epoch": self.epoch,
+                "loss": self.best_loss,
+                "optimizer": self.optimizer.state_dict(),
+                "aux_optimizer": self.aux_optimizer.state_dict(),
+                "lr_scheduler": self.lr_scheduler.state_dict()
+            }, 
+            self.check_point_path
+        )
+        print("model saved !")
+    
+    def train_one_epoch(self):
         self.train().to(self.device)
-        pbar = tqdm(train_dataloader,desc="Processing epoch "+str(epoch), unit="batch")
+        pbar = tqdm(self.train_dataloader,desc="Processing epoch "+str(self.epoch), unit="batch")
         total_loss = AverageMeter()
         
-        for batch_id, inputs in enumerate(train_dataloader):
+        for batch_id, inputs in enumerate(self.train_dataloader):
             """ grad zeroing """
-            optimizer.zero_grad()
-            aux_optimizer.zero_grad()
+            self.optimizer.zero_grad()
+            self.aux_optimizer.zero_grad()
 
             """ forward """
             used_memory = 0 if self.device != "cuda" else torch.cuda.memory_allocated(torch.cuda.current_device()) / (1024 ** 3)  
@@ -386,52 +168,26 @@ class ModelCompressionBase(ModelBase):
             total_loss.update(out_criterion["total_loss"].item())
 
             """ grad clip """
-            if clip_max_norm > 0:
-                torch.nn.utils.clip_grad_norm_(self.parameters(), clip_max_norm)
+            torch.nn.utils.clip_grad_norm_(self.parameters(), self.clip_max_norm)
                 
             aux_loss = self.aux_loss()
             aux_loss.backward()
-            aux_optimizer.step()
+            self.aux_optimizer.step()
 
             """ modify parameters """
-            optimizer.step()
+            self.optimizer.step()
             after_used_memory = 0 if self.device != "cuda" else torch.cuda.memory_allocated(torch.cuda.current_device()) / (1024 ** 3) 
             postfix_str = "Train Epoch: {:d}, total_loss: {:.4f}, use_memory: {:.1f}G".format(
-                epoch,
+                self.epoch,
                 total_loss.avg, 
                 after_used_memory - used_memory
             )
             pbar.set_postfix_str(postfix_str)
             pbar.update()
             
-        with open(log_path, "a") as file:
-            file.write(postfix_str+"\n")
-
-        return total_loss.avg
-
-    def test_epoch(self, epoch, test_dataloader, log_path = None):
-        total_loss = AverageMeter()
-        self.eval()
-        self.to(self.device)
-        with torch.no_grad():
-            for batch_id, inputs in enumerate(test_dataloader):
-                """ forward """
-                output = self.forward(inputs)
-
-                """ calculate loss """
-                out_criterion = self.compute_loss(output)
-                total_loss.update(out_criterion["total_loss"].item())
-
-            str = "Test Epoch: {:d}, total_loss: {:.4f}".format(
-                epoch,
-                total_loss.avg, 
-            )
-        print(str)
-        with open(log_path, "a") as file:
-            file.write(str+"\n")
-        return total_loss.avg
+        self.logger.info(postfix_str)
     
-    def eval_epoch(self, val_dataloader = None, log_path = None):
+    def eval_model(self, val_dataloader):
         psnr = AverageMeter()
         bpp = AverageMeter()
         with torch.no_grad():
@@ -447,48 +203,14 @@ class ModelCompressionBase(ModelBase):
                 for i in range(b):
                     psnr.update(calculate_psnr(output["reconstruction_image"][i].cpu() * 255, inputs["image"][i].cpu() * 255))
     
-        log_message = "PSNR = {:.4f}, BPP = {:.2f}\n".format(psnr.avg, bpp.avg)
-        print(log_message)
-        if log_path != None:
-            with open(log_path, "a") as file:
-                file.write(log_message+"\n")
-                
+        print("PSNR = {:.4f}, BPP = {:.2f}\n".format(psnr.avg, bpp.avg))
         output = {
-            "log_message":log_message,
             "PSNR": psnr.avg,
             "bpp": bpp.avg
         }
-        
         return output
     
     def aux_loss(self) -> Tensor:
-        r"""Returns the total auxiliary loss over all ``EntropyBottleneck``\s.
-
-        In contrast to the primary "net" loss used by the "net"
-        optimizer, the "aux" loss is only used by the "aux" optimizer to
-        update *only* the ``EntropyBottleneck.quantiles`` parameters. In
-        fact, the "aux" loss does not depend on image data at all.
-
-        The purpose of the "aux" loss is to determine the range within
-        which most of the mass of a given distribution is contained, as
-        well as its median (i.e. 50% probability). That is, for a given
-        distribution, the "aux" loss converges towards satisfying the
-        following conditions for some chosen ``tail_mass`` probability:
-
-        * ``cdf(quantiles[0]) = tail_mass / 2``
-        * ``cdf(quantiles[1]) = 0.5``
-        * ``cdf(quantiles[2]) = 1 - tail_mass / 2``
-
-        This ensures that the concrete ``_quantized_cdf``\s operate
-        primarily within a finitely supported region. Any symbols
-        outside this range must be coded using some alternative method
-        that does *not* involve the ``_quantized_cdf``\s. Luckily, one
-        may choose a ``tail_mass`` probability that is sufficiently
-        small so that this rarely occurs. It is important that we work
-        with ``_quantized_cdf``\s that have a small finite support;
-        otherwise, entropy coding runtime performance would suffer.
-        Thus, ``tail_mass`` should not be too small, either!
-        """
         loss = sum(m.loss() for m in self.modules() if isinstance(m, EntropyBottleneck))
         return cast(Tensor, loss)
 
@@ -520,13 +242,13 @@ class ModelVBRCompressionBase(ModelCompressionBase):
         self.lmbda = [0.0018, 0.0035, 0.0067, 0.0130, 0.025, 0.0483, 0.0932, 0.18]
         self.levels = len(self.lmbda) 
 
-    def test_epoch(self, epoch, test_dataloader, log_path = None):
+    def test_one_epoch(self):
         total_loss = AverageMeter()
         # self.eval()
         self.to(self.device)
         with torch.no_grad():
             for s in range(self.levels):
-                for batch_id, inputs in enumerate(test_dataloader):
+                for batch_id, inputs in enumerate(self.test_dataloader):
                     """ forward """
                     output = self.forward(inputs, s = s, is_train = False)
 
@@ -534,20 +256,10 @@ class ModelVBRCompressionBase(ModelCompressionBase):
                     out_criterion = self.compute_loss(output)
                     total_loss.update(out_criterion["total_loss"].item())
 
-            str = "Test Epoch: {:d}, total_loss: {:.4f}".format(
-                epoch,
-                total_loss.avg, 
-            )
-        print(str)
-        with open(log_path, "a") as file:
-            file.write(str+"\n")
+        self.logger.info("Test Epoch: {:d}, total_loss: {:.4f}".format(self.epoch, total_loss.avg))
         return total_loss.avg
     
-    def eval_epoch(
-        self,
-        val_dataloader = None, 
-        log_path = None
-    ):
+    def eval_model(self, val_dataloader):
         psnrs = [AverageMeter() for i in self.lmbda]
         bpps = [AverageMeter() for i in self.lmbda]
         with torch.no_grad():
@@ -571,12 +283,7 @@ class ModelVBRCompressionBase(ModelCompressionBase):
             log_message = log_message + f"lamda = {lamda}, s = {index}, stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
             # log_message = log_message + f"lamda = {lamda}, s = {index}, scale: {self.Gain.data[index].cpu().numpy():0.4f}, stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
         print(log_message)
-        if log_path != None:
-            with open(log_path, "a") as file:
-                file.write(log_message+"\n")
-                
         output = {
-            "log_message":log_message,
             "PSNR": psnrs,
             "bpp": bpps
         }
@@ -709,24 +416,4 @@ class ModelDDPM(ModelDiffusionBase):
         alphabar_t = self.alphabar_t[_ts]
         return x_0, alphabar_t, z_t, noise
 
-class FC:
-    def __init__(self):
-        self.predict_model = Unet(
-            width = self.width,
-            height = self.height, 
-            in_c = self.channel, 
-            out_c = self.channel, 
-            time_dim = self.time_dim
-        ).to(self.device)
-       
-    def forward(self, y_hat, noisy, n):
-        
-        # 预测误差
-        predict_noisy = self.predict_model(y_hat, n)
-           
-        # 还原为量化之前
-        y_0 = y_hat - predict_noisy / self.Gain[:, n]
-        
-        return y_0, predict_noisy
-        
            

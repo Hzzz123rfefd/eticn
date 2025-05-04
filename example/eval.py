@@ -1,7 +1,6 @@
 import sys
 import os
 sys.path.append(os.getcwd())
-
 import argparse
 from torch.utils.data import DataLoader
 from compressai import models, datasets
@@ -34,13 +33,13 @@ def main(args):
         collate_fn = dataset.collate_fn
     )
     
-    net.eval_epoch(val_dataloader = dataloader, log_path = None)
+    net.eval_model(val_dataloader = dataloader)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_config_path", type=str, default = "config/eticn.yml")
-    parser.add_argument("--data_path", type=str, default = "camvid_train/test.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/")
+    parser.add_argument("--data_path", type=str, default = "camvid_train/val.jsonl")
+    parser.add_argument("--model_path", type=str, default = "saved_model/eticn/")
     parser.add_argument("--lamda", type=str, default = 0.0001)
     args = parser.parse_args()
     main(args)
