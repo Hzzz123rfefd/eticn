@@ -18,6 +18,7 @@ git clone https://github.com/Hzzz123rfefd/eticn.git
 cd eticn
 pip install -e .
 pip install -r requirement.txt
+sh -x script/init_submodules.sh
 ```
 
 ## Usage
