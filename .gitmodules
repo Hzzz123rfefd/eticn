@@ -1,0 +1,4 @@
+[submodule "third_party/DL_Pipeline"]
+	path = third_party/DL_Pipeline
+	url = https://github.com/Hzzz123rfefd/DL_Pipeline.git
+	branch = main
