@@ -89,3 +89,4 @@ Pretrained models (optimized for MSE) trained from scratch using  images from th
  * camvid Images Dataset: https://www.kaggle.com/datasets/carlolepelaars/camvid
  * SODA10M Images Dataset: https://soda-2d.github.io/download.html
 
+# CQVRTICN: Channel-base Quantization-error-aware Variable Rate Traffic Image Compression Network

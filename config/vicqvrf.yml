@@ -1,7 +1,7 @@
 # config.yml
 
 model_type:
-  vicvbr
+  vicqvrf
 # mdoel args
 model:        
   image_channel: 3
