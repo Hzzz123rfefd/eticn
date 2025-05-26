@@ -39,6 +39,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_config_path", type=str, default = "config/eticncqvr.yml")
     parser.add_argument("--data_path", type=str, default = "camvid_train/test.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/eticncqvr")
+    parser.add_argument("--model_path", type=str, default = "saved_model/eticncqvr stage = 2")
     args = parser.parse_args()
     main(args)
