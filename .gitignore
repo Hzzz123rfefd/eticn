@@ -11,4 +11,5 @@ saved_model
 *.pyd
 *.pth
 *.npy
+result
 

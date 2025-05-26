@@ -283,10 +283,17 @@ class ModelVBRCompressionBase(ModelCompressionBase):
             log_message = log_message + f"lamda = {lamda}, s = {index}, stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
             # log_message = log_message + f"lamda = {lamda}, s = {index}, scale: {self.Gain.data[index].cpu().numpy():0.4f}, stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
         print(log_message)
+        
+        psnrs = [each.avg for each in psnrs]
+        bpps = [float(each.avg.cpu().numpy()) for each in bpps]
+        del psnrs[1]
+        del bpps[1]
+        
         output = {
             "PSNR": psnrs,
             "bpp": bpps
         }
+        return output
 
     def load_pretrained(self, save_model_dir):
         self.load_state_dict(torch.load(save_model_dir + "/model.pth"))

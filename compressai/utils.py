@@ -106,8 +106,6 @@ def recursive_collate_fn(batch):
     else:
         return default_collate(batch)
     
-
-
 def calculate_psnr(img1, img2):
 
     assert img1.shape == img2.shape, "输入图像的形状必须相同"

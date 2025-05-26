@@ -1,3 +1,4 @@
+import json
 import sys
 import os
 sys.path.append(os.getcwd())
@@ -10,6 +11,7 @@ from compressai.utils import load_config
 
 def main(args):
     config = load_config(args.model_config_path)
+    os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
 
     """ get model"""
     net = models[config["model_type"]](**config["model"]).to(config["model"]["device"])
@@ -33,12 +35,16 @@ def main(args):
         collate_fn = dataset.collate_fn
     )
     
-    net.eval_model(val_dataloader = dataloader)
+    ret = net.eval_model(val_dataloader = dataloader)
+    with open(args.save_path, "w") as f:
+        json.dump(ret, f, indent=4)
+    
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_config_path", type=str, default = "config/eticncqvr.yml")
     parser.add_argument("--data_path", type=str, default = "camvid_train/test.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/eticncqvr stage = 2")
+    parser.add_argument("--model_path", type=str, default = "saved_model/eticncqvr stage = 3")
+    parser.add_argument("--save_path", type=str, default = "result/eticncqvr.json")
     args = parser.parse_args()
     main(args)
