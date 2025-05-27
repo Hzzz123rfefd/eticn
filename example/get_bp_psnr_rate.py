@@ -8,7 +8,7 @@ import argparse
 def load_data(json_path):
     with open(json_path, 'r') as f:
         data = json.load(f)
-    return data['bpp'], data['psnr']
+    return data['bpp'], data['PSNR']
 
 
 def bd_rate(bpp1, psnr1, bpp2, psnr2):
@@ -59,7 +59,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base_result_path", type=str, default = "ref_result.json")
-    parser.add_argument("--target_result_path", type=str, default = "test_result.json")
+    parser.add_argument("--base_result_path", type=str, default = "result/eticn.json")
+    parser.add_argument("--target_result_path", type=str, default = "result/eticncqvr-no-diffusion.json")
     args = parser.parse_args()
     main(args)

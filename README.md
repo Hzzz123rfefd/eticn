@@ -90,3 +90,48 @@ Pretrained models (optimized for MSE) trained from scratch using  images from th
  * SODA10M Images Dataset: https://soda-2d.github.io/download.html
 
 # CQVRTICN: Channel-base Quantization-error-aware Variable Rate Traffic Image Compression Network
+
+
+### Evaluation
+you can evaluate a trained model on your own dataset, the evaluation script is:
+```bash
+python example/eval_vbr.py --model_config_path config/eticn.yml --data_path camvid_train/test.jsonl --model_path saved_model/eticncqvr --save_path result/eticncqvr.json
+```
+then,you will get the result at `result/eticncqvr.json` like this:
+```json
+{
+    "PSNR": [
+        30.866245705505897,
+        32.85640724774065,
+        34.93440343593729,
+        36.30716484990613,
+        38.3249962740931,
+        39.87044365652676,
+        41.2900884233672
+    ],
+    "bpp": [
+        0.2522478997707367,
+        0.32921168208122253,
+        0.43938854336738586,
+        0.5399808287620544,
+        0.7371411323547363,
+        0.9344069361686707,
+        1.1695828437805176
+    ]
+}
+```
+
+
+## Result
+#### BD result
+you can get bd-psnr and bd-bpp through the following script:
+```bash 
+python example/get_bp_psnr_rate.py --base_result_path {base result json, you can get by eval_vbr.py} --target_result_path {target result json}
+```
+
+#### RD curves
+you can get bd-psnr and bd-bpp through the following script:
+```bash 
+python example/get_bp_psnr_rate.py --base_result_path {base result json, you can get by eval_vbr.py} --target_result_path {target result json}
+```
+
