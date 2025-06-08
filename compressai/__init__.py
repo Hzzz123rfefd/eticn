@@ -1,18 +1,26 @@
-from compressai.model import ETICN, ETICNQVRF, ETICNCQVR, VICQVRF, STF, STFQVRF
-from compressai.dataset import DatasetForETICN
+from compressai.model import ETICN, ETICNQVRF, ETICNCQVR, STF
+from compressai.model_vbr import VIC_CQVR, VAIC_CQVR, STF_CQVR, STF_QVRF, VAIC_QVRF, VIC_QVRF
+from compressai.dataset import DatasetForETICN, DatasetForImageCompression
 
 
 datasets = {
-    "eticn":DatasetForETICN
+    "eticn":DatasetForETICN,
+    "compression": DatasetForImageCompression
 }
 
 models = {
-    "eticn":ETICN,
-    "stf":STF,
-    "eticnqvrf":ETICNQVRF,
-    "eticncqvr":ETICNCQVR,
-    "stfqvrf":STFQVRF, 
-    "vicqvrf": VICQVRF,
+    "eticn": ETICN,
+    "stf": STF,
+    
+    "eticnqvrf": ETICNQVRF,
+    "stfqvrf": STF_QVRF, 
+    "vicqvrf": VIC_QVRF,
+    "vaicqvrf": VAIC_QVRF,
+    
+    "viccqvr": VIC_CQVR,
+    "vaiccqvr": VAIC_CQVR,
+    "stfcqvr": STF_CQVR,
+    "eticncqvr": ETICNCQVR
 }
 
 

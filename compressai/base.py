@@ -7,7 +7,7 @@ from abc import abstractmethod
 from tqdm import tqdm
 import torch.nn.functional as F
 from typing import cast
-
+import random
 from compressai.utils import *
 from compressai.entropy_models import *
 from compressai.modules import *
@@ -34,7 +34,6 @@ class ModelCompressionBase(ModelBase):
         self.lamda = lamda
         self.out_channel_m = out_channel_m
         self.out_channel_n = out_channel_n
-        
         self.entropy_bottleneck = EntropyBottleneck(out_channel_n).to(self.device)
         self.gaussian_conditional = GaussianConditional(None).to(self.device)
 
@@ -226,7 +225,7 @@ class ModelCompressionBase(ModelBase):
         else:
             torch.save(self.state_dict(), save_model_dir + str(lamda) + "/model.pth")
   
-class ModelVBRCompressionBase(ModelCompressionBase):
+class ModelQVRFBase(ModelCompressionBase):
     def __init__(
         self,
         image_channel,
@@ -238,10 +237,29 @@ class ModelVBRCompressionBase(ModelCompressionBase):
         device = "cuda"
     ):
         super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, None, None, device)
+        self.Gain = torch.nn.Parameter(torch.tensor(
+            [1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]), requires_grad = True)
         self.stage = stage
         self.lmbda = [0.0018, 0.0035, 0.0067, 0.0130, 0.025, 0.0483, 0.0932, 0.18]
         self.levels = len(self.lmbda) 
 
+    def get_scale(self, s, is_train):
+        if is_train == True:
+            if self.stage > 1:
+                s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+                if s != 0:
+                    scale = torch.max(self.Gain[s], torch.tensor(1e-4)) + 1e-9
+                else:
+                    s = 0
+                    scale = self.Gain[s].detach().clone()
+            else:
+                s = self.levels - 1
+                scale = self.Gain[0].detach()
+        else:
+            scale = self.Gain[s]
+        rescale = 1.0 / scale.clone().detach()
+        return scale, rescale, s
+    
     def test_one_epoch(self):
         total_loss = AverageMeter()
         # self.eval()
@@ -301,6 +319,74 @@ class ModelVBRCompressionBase(ModelCompressionBase):
     def save_pretrained(self, save_model_dir):
         torch.save(self.state_dict(), save_model_dir + "/model.pth")
         
+class ModelCQVRBase(ModelQVRFBase):        
+    def __init__(
+        self,
+        image_channel,
+        image_height,
+        image_weight, 
+        time_dim,
+        out_channel_m, 
+        out_channel_n, 
+        stage = 1,
+        device = "cuda"
+    ):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device)
+        self.time_dim = time_dim
+        self.Gain = torch.nn.Parameter(torch.tensor(
+             [[1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]] * self.out_channel_m, dtype=torch.float32), requires_grad=True)
+        
+        self.predict_model = Unet(
+            width = (int)(self.image_weight / 16), 
+            height = (int)(self.image_height / 16), 
+            in_c = self.out_channel_m, 
+            out_c = self.out_channel_m, 
+            time_dim = self.time_dim
+        ).to(self.device)
+    
+    def get_scale(self, s, is_train):
+        if is_train == True:
+            if self.stage > 1:
+                s = random.randint(0, self.levels - 1)
+                if s != 0:
+                    if self.stage == 2:
+                        scale = torch.max(self.Gain[:, s], torch.tensor(1e-4)) + 1e-9
+                    else:
+                        scale = torch.max(self.Gain[:, s], torch.tensor(1e-4)) + 1e-9
+                        scale = scale.detach().clone()
+                else:
+                    s = 0
+                    scale = self.Gain[:, s].detach().clone()
+            else:
+                s = self.levels - 1
+                scale = self.Gain[:, 0].detach()
+        else:
+            scale = self.Gain[:, s]
+        scale = scale.unsqueeze(0).unsqueeze(2).unsqueeze(3)
+        rescale = 1.0 / scale.clone().detach()
+        return scale, rescale, s
+    
+    def y_hat_enhance(self, y, scale, rescale, s, batch):
+        if self.stage != 3:
+            y_hat = self.gaussian_conditional.quantize(y * scale, "noise" if self.training else "dequantize") * rescale
+            noisy = None
+            predict_noisy = None
+        else:
+            y_hat, noisy = self.gaussian_conditional.quantize(y * scale, "noise" if self.training else "dequantize", return_noisy = True)
+            y_hat = y_hat * rescale
+            t = torch.ones((batch)) * (self.levels - s)
+            t = t.to(self.device)
+            predict_noisy = self.predict_model(y_hat, t)
+            y_hat = y_hat - predict_noisy * rescale
+        return y_hat, noisy, predict_noisy
+           
+    def compute_loss(self, input):
+        output = super().compute_loss(input)
+        if self.stage == 3 and self.training:
+            output["noisy_loss"] = F.mse_loss(input["noisy"], input["predict_noisy"])
+            output["total_loss"] = output["total_loss"] + output["noisy_loss"]
+        return output
+    
 class ModelDiffusionBase(ModelBase):
     def __init__(
         self,

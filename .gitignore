@@ -5,11 +5,14 @@ __pycache__
 version.py
 data
 imgs
-saved_model
+saved_model*
 .DS_Store
 *.png
 *.pyd
 *.pth
 *.npy
 result
+imagenet
+*.docx
+*train
 
