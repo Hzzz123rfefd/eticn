@@ -296,6 +296,62 @@ class STF(ModelCompressionBase):
         }
         return output
 
+class VIC(ModelCompressionBase):
+    def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
+        self.N = self.out_channel_n
+        self.M = self.out_channel_m
+        self.g_a = nn.Sequential(
+            conv(3, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.M, kernel_size=5, stride=2),
+        )
+        self.g_s = nn.Sequential(
+            deconv(self.M, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, 3, kernel_size=5, stride=2),
+        )
+        self.h_a = nn.Sequential(
+            conv(self.M, self.N, stride=1, kernel_size=3),
+            nn.ReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+        )
+        self.h_s = nn.Sequential(
+            deconv(self.N, self.M, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            deconv(self.M, self.M * 3 // 2, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            conv(self.M * 3 // 2, self.M, stride=1, kernel_size=3),
+        )
+    
+    def forward(self,inputs):
+        image = inputs["image"].to(self.device)
+        b, _, _, _ = image.shape
+        y = self.g_a(image)
+        z = self.h_a(y)
+        z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        scales_hat = self.h_s(z_hat)
+        y_hat, y_likelihoods = self.gaussian_conditional(y, scales_hat)
+        x_hat = self.g_s(y_hat)
+        x_hat = torch.clamp(x_hat, 0, 1)
+        output = {
+            "image":inputs["image"].to(self.device),
+            "reconstruction_image":x_hat,
+            "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+            "lamda": self.lamda
+        }
+        return output
+
 class ETICNCQVR(ModelQVRFBase):
     def __init__(
         self,
