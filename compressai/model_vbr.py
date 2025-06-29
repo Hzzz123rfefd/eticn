@@ -228,8 +228,8 @@ class STF_CQVR(ModelCQVRBase):
         return output
     
 class VIC_QVRF(ModelQVRFBase):
-    def __init__(self, image_channel, image_height, image_weight, time_dim, out_channel_m, out_channel_n, stage, device):
-        super().__init__(image_channel, image_height, image_weight, time_dim, out_channel_m, out_channel_n, stage, device)
+    def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device)
         self.N = self.out_channel_n
         self.M = self.out_channel_m
         self.g_a = nn.Sequential(
