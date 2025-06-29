@@ -301,7 +301,6 @@ class VAIC_QVRF(ModelQVRFBase):
         super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device)
         self.N = out_channel_n
         self.M = out_channel_m
-        self.stage = stage
 
         self.g_a = nn.Sequential(
             conv(3, self.N, kernel_size=5, stride=2),
