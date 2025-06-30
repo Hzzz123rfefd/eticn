@@ -11,11 +11,11 @@ from compressai.utils import load_config
 def main(args):
     config = load_config(args.model_config_path)
 
-    lamdas = [0.0081, 0.0036, 0.0016, 0.0009, 0.0004, 0.0002, 0.0001]
+    lamdas = [0.18]
     bpps = []
     psnrs=[]
     """ get model"""
-    net = models[config["model_type"]](**config["model"])
+    net = models[config["model_type"]](**config["model"]).to(config["model"]["device"])
     
     for lamda in lamdas:
         net.load_pretrained(
@@ -53,9 +53,9 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/eticn.yml")
-    parser.add_argument("--data_path", type=str, default = "camvid_train/test.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/eticn/")
-    parser.add_argument("--save_path", type=str, default = "result/eticn.json")
+    parser.add_argument("--model_config_path", type=str, default = "config/camvid/vaic.yml")
+    parser.add_argument("--data_path", type=str, default = "camvid_train/val.jsonl")
+    parser.add_argument("--model_path", type=str, default = "saved_model/fbr/vaic-camvid/")
+    parser.add_argument("--save_path", type=str, default = "result/stf-imagenet.json")
     args = parser.parse_args()
     main(args)

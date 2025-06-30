@@ -133,7 +133,6 @@ class ModelCompressionBase(ModelBase):
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
             self.best_loss = checkpoint["loss"]
             self.last_epoch = checkpoint["epoch"]
-            # self.last_epoch = 145
     
     def save_train_log(self):
         torch.save({
