@@ -1,30 +1,28 @@
 # config.yml
 
 model_type:
-  stf
+  viccqvr
 # mdoel args
 model:        
   image_channel: 3
   image_weight: 512
   image_height: 512
-  patch_size: 2
-  embedding_dim: 40
   out_channel_m: 192
   out_channel_n: 128
-  lamda: 0.18
-  finetune_model_dir: null
+  time_dim: 32
+  stage: 1
   device: cuda   
 
 # trainning args
 traininng:
   batch_size: 2               
-  epochs: 500          
+  epochs: 1000          
   learning_rate: 0.0001   
   optimizer: Adam              
-  weight_decay: 0.0001
+  weight_decay: 0.0001   
   clip_max_norm: 0.5
   factor: 0.3
-  patience: 15         
+  patience: 20         
   device: cuda
 
 dataset_type:
@@ -36,6 +34,8 @@ dataset:
   test_data_path: imagenet_train/test.jsonl
   valid_data_path: imagenet_train/val.jsonl
 
+
+
 logging:
-  eval_interval: 100           
-  save_dir: "./saved_model/fbr/stf-imagenet"   
+  eval_interval: 100    
+  save_dir: "./saved_model/vbr/viccqvr-imagenet"   
