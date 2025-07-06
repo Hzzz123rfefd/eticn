@@ -226,7 +226,7 @@ class STF_CQVR(ModelCQVRBase):
             "lamda": self.lmbda[s]
         }
         return output
-    
+           
 class VIC_QVRF(ModelQVRFBase):
     def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device):
         super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device)
