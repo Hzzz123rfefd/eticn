@@ -42,9 +42,9 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/vaiccqvr.yml")
+    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/vaicqvrf2.yml")
     parser.add_argument("--data_path", type=str, default = "imagenet_train/test.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/vbr/vaiccqvr-imagenet")
+    parser.add_argument("--model_path", type=str, default = "saved_model/vbr/vaicqvrf2-imagenet")
     parser.add_argument("--save_path", type=str, default = "result/vbr/imagenet/stfcqvr.json")
     args = parser.parse_args()
     main(args)

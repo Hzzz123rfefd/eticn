@@ -54,7 +54,7 @@ class VIC_CQVR(ModelCQVRBase):
             z_hat, z_likelihoods = self.entropy_bottleneck(z)
             scales_hat = self.h_s(z_hat)
             y_hat, noisy, predict_noisy = self.y_hat_enhance(y, scale, rescale, s, b)
-            _, y_likelihoods = self.gaussian_conditional(y, scales_hat * scale)
+            _, y_likelihoods = self.gaussian_conditional(y * scale, scales_hat * scale)
             x_hat = self.g_s(y_hat)
         x_hat = torch.clamp(x_hat, 0, 1)
         output = {
@@ -214,7 +214,7 @@ class STF_CQVR(ModelCQVRBase):
                 torch.concat((local_ctx, side_ctx),dim=1)
             )
             scales_hat, means_hat = gaussian_params.chunk(2, 1)
-            _,y_likelihoods = self.gaussian_conditional(y * scale - means_hat * scale, scales_hat * scale)
+            _, y_likelihoods = self.gaussian_conditional(y * scale - means_hat * scale, scales_hat * scale)
             x_hat = self.image_transform_decoder(y_hat)
         x_hat = torch.clamp(x_hat, 0, 1)
         output = {
@@ -275,7 +275,7 @@ class VIC_QVRF(ModelQVRFBase):
             z = self.h_a(y)
             z_hat, z_likelihoods = self.entropy_bottleneck(z)
             scales_hat = self.h_s(z_hat)
-            y_hat, y_likelihoods = self.gaussian_conditional(y, scales_hat * scale)
+            y_hat, y_likelihoods = self.gaussian_conditional(y * scale, scales_hat * scale)
             y_hat = y_hat * rescale
             x_hat = self.g_s(y_hat)
         x_hat = torch.clamp(x_hat, 0, 1)
