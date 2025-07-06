@@ -1,9 +1,9 @@
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data.dataloader import default_collate
 import yaml
 from torch import Tensor
+from skimage.metrics import structural_similarity as ssim
 
 def configure_optimizers(net, lr):
     """Separate parameters for the main optimizer and the auxiliary optimizer.
@@ -119,6 +119,24 @@ def calculate_psnr(img1, img2):
 
     psnr = 20 * torch.log10(255.0 / torch.sqrt(mse))
     return psnr.item()
+
+def calculate_ssim(image1, image2):
+    """
+    计算两张 3 通道 RGB 图像的 SSIM 值
+    
+    参数:
+    - image1: 形状为 (3, h, w) 的 NumPy 数组，代表第一张图像
+    - image2: 形状为 (3, h, w) 的 NumPy 数组，代表第二张图像
+    
+    返回:
+    - 两张图像的平均 SSIM 值
+    """
+    assert image1.shape == image2.shape, "两张图像必须具有相同的形状"
+    ssim_total = 0.0
+    for i in range(3):
+        ssim_value, _ = ssim(image1[i], image2[i], full=True,data_range = 255)
+        ssim_total += ssim_value
+    return ssim_total / 3
 
 def lower_bound_bwd(x: Tensor, bound: Tensor, grad_output: Tensor):
     pass_through_if = (x >= bound) | (grad_output < 0)

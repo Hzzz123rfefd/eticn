@@ -279,6 +279,7 @@ class ModelQVRFBase(ModelCompressionBase):
     def eval_model(self, val_dataloader):
         psnrs = [AverageMeter() for i in self.lmbda]
         bpps = [AverageMeter() for i in self.lmbda]
+        ssims = [AverageMeter() for i in self.lmbda]
         with torch.no_grad():
             for batch_id, inputs in enumerate(val_dataloader):
                 b, c, h, w = inputs["image"].shape
@@ -293,21 +294,24 @@ class ModelQVRFBase(ModelCompressionBase):
                     )
                     
                     for i in range(b):
-                        psnrs[s].update(calculate_psnr(output["reconstruction_image"].cpu() * 255, inputs["image"].cpu() * 255))
+                        psnrs[s].update(calculate_psnr(output["reconstruction_image"][i,:,:,:].cpu() * 255, inputs["image"][i,:,:,:].cpu() * 255))
+                        ssims[s].update(calculate_ssim(output["reconstruction_image"][i,:,:,:].cpu().numpy() * 255, inputs["image"][i,:,:,:].cpu().numpy() * 255))
 
         log_message = ""
         for index, lamda in enumerate(self.lmbda):
-            log_message = log_message + f"lamda = {lamda}, s = {index}, stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
-            # log_message = log_message + f"lamda = {lamda}, s = {index}, scale: {self.Gain.data[index].cpu().numpy():0.4f}, stage {self.stage}, PSNR = {psnrs[index].avg},  BPP = {bpps[index].avg}\n"
+            log_message = log_message + f"lamda = {lamda}, s = {index}, stage {self.stage}, PSNR = {psnrs[index].avg},  MSSSIM = {ssims[index].avg}, BPP = {bpps[index].avg}\n"
         print(log_message)
         
         psnrs = [each.avg for each in psnrs]
+        ssims = [each.avg for each in ssims]
         bpps = [float(each.avg.cpu().numpy()) for each in bpps]
         del psnrs[1]
         del bpps[1]
+        del ssims[1]
         
         output = {
             "PSNR": psnrs,
+            "ms-ssim": ssims, 
             "bpp": bpps
         }
         return output
