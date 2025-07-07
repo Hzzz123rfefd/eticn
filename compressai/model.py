@@ -444,8 +444,6 @@ class GRIC(ModelCompressionBase):
         shift_size,
         out_channel_m,
         out_channel_n,
-        group_num,
-        codebook_size,
         transfomer_head,
         transfomer_blocks,
         drop_prob = 0.1,
@@ -459,8 +457,6 @@ class GRIC(ModelCompressionBase):
         self.window_size = window_size
         self.head_num = head_num
         self.shift_size = shift_size
-        self.group_num = group_num
-        self.codebook_size = codebook_size
         self.transfomer_head = transfomer_head
         self.transfomer_blocks = transfomer_blocks
         self.drop_prob = drop_prob
@@ -535,42 +531,42 @@ class GRIC(ModelCompressionBase):
         ).to(self.device)
 
     def forward(self,inputs):
-            image = inputs["image"].to(self.device)
-            """ get latent vector """
-            y, mid_feather = self.image_transform_encoder(image)
+        image = inputs["image"].to(self.device)
+        """ get latent vector """
+        y, mid_feather = self.image_transform_encoder(image)
 
-            """ get side message """
-            z = self.hyperpriori_encoder(y)
-            z_hat, z_likelihoods = self.entropy_bottleneck(z)
-            side_ctx = self.side_context(z_hat)
+        """ get side message """
+        z = self.hyperpriori_encoder(y)
+        z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        side_ctx = self.side_context(z_hat)
 
-            y_hat = self.gaussian_conditional.quantize(
-                y, "noise" if self.training else "dequantize"
-            )
+        y_hat = self.gaussian_conditional.quantize(
+            y, "noise" if self.training else "dequantize"
+        )
 
-            """ get local message """
-            local_ctx = self.local_context(y_hat)
+        """ get local message """
+        local_ctx = self.local_context(y_hat)
 
-            """ get global message """
-            global_ctx = self.global_context(y_hat,local_ctx)
+        """ get global message """
+        global_ctx = self.global_context(y_hat,local_ctx)
 
-            """ parameters estimation"""
-            gaussian_params1 = self.parm1(
-                torch.concat((local_ctx,global_ctx,side_ctx),dim=1)
-            )
-            scales_hat, means_hat = gaussian_params1.chunk(2, 1)
-            _,y_likelihoods = self.gaussian_conditional(y, scales_hat, means_hat)
-            """ inverse transformation"""
-            x_hat = self.image_transform_decoder(y_hat)
-            x_hat = torch.clamp(x_hat,0,1)
+        """ parameters estimation"""
+        gaussian_params1 = self.parm1(
+            torch.concat((local_ctx,global_ctx,side_ctx),dim=1)
+        )
+        scales_hat, means_hat = gaussian_params1.chunk(2, 1)
+        _,y_likelihoods = self.gaussian_conditional(y, scales_hat, means_hat)
+        """ inverse transformation"""
+        x_hat = self.image_transform_decoder(y_hat)
+        x_hat = torch.clamp(x_hat,0,1)
 
-            output = {
-                "image":inputs["image"].to(self.device),
-                "reconstruction_image":x_hat,
-                "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
-                "lamda":self.lamda
-            }
-            return output
+        output = {
+            "image":inputs["image"].to(self.device),
+            "reconstruction_image":x_hat,
+            "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+            "lamda":self.lamda
+        }
+        return output
                 
 class ETICNCQVR(ModelQVRFBase):
     def __init__(
