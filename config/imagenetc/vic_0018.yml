@@ -9,7 +9,7 @@ model:
   image_height: 512
   out_channel_m: 192
   out_channel_n: 128
-  lamda: 0.0932
+  lamda: 0.0018
   finetune_model_dir: "./saved_model/fbr/imagenet/vic/0.18"  
   device: cuda   
 
