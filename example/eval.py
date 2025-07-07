@@ -53,9 +53,9 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/camvid/vaic.yml")
-    parser.add_argument("--data_path", type=str, default = "camvid_train/val.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/fbr/vaic-camvid/")
-    parser.add_argument("--save_path", type=str, default = "result/stf-imagenet.json")
+    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/stf.yml")
+    parser.add_argument("--data_path", type=str, default = "imagenet_train/test.jsonl")
+    parser.add_argument("--model_path", type=str, default = "saved_model/fbr/imagenet/stf/")
+    parser.add_argument("--save_path", type=str, default = "result/vic-imagenet.json")
     args = parser.parse_args()
     main(args)

@@ -46,4 +46,4 @@ dataset:
 
 logging:
   eval_interval: 100           
-  save_dir: "./saved_model/fbr/gric-imagenet"   
+  save_dir: "./saved_model/fbr/imagenet/gric"   

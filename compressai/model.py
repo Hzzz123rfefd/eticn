@@ -336,7 +336,6 @@ class VIC(ModelCompressionBase):
     
     def forward(self,inputs):
         image = inputs["image"].to(self.device)
-        b, _, _, _ = image.shape
         y = self.g_a(image)
         z = self.h_a(y)
         z_hat, z_likelihoods = self.entropy_bottleneck(z)

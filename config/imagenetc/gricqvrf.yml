@@ -45,4 +45,4 @@ dataset:
 
 logging:
   eval_interval: 100           
-  save_dir: "./saved_model/vbr/gricqvrf-imagenet"   
+  save_dir: "./saved_model/vbr/imagenet/gricqvrf"   

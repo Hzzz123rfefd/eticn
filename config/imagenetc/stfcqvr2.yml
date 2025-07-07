@@ -40,4 +40,4 @@ dataset:
 
 logging:
   eval_interval: 100        
-  save_dir: "./saved_model/vbr/stfcqvr2-imagenet"   
+  save_dir: "./saved_model/vbr/imagenet/stfcqvr2"   
