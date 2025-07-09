@@ -42,9 +42,9 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/camvid/stfqvrf.yml")
+    parser.add_argument("--model_config_path", type=str, default = "config/camvid/eticnqvrf2.yml")
     parser.add_argument("--data_path", type=str, default = "camvid_train/test.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/vbr/camvid/stfqvrf/")
+    parser.add_argument("--model_path", type=str, default = "saved_model/vbr/camvid/eticnqvrf2-/")
     parser.add_argument("--save_path", type=str, default = "result/vbr/imagenet/stfcqvr.json")
     args = parser.parse_args()
     main(args)

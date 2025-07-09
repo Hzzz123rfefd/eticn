@@ -114,6 +114,11 @@ class ModelCompressionBase(ModelBase):
         if  os.path.isdir(self.save_model_dir) and os.path.exists(self.check_point_path) and os.path.exists(self.log_path):
             self.load_pretrained(self.save_model_dir)  
             self.first_trainning = False
+        if os.path.isdir(self.save_model_dir) and not os.path.exists(self.check_point_path) and not os.path.exists(self.log_path):
+            self.load_pretrained(self.save_model_dir)  
+            with open(self.log_path, "w") as f:
+                pass  
+            self.first_trainning = True
         else:
             os.makedirs(self.save_model_dir, exist_ok = True)
             with open(self.log_path, "w") as f:
