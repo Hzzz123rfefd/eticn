@@ -19,8 +19,8 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--vbr_model_config_path", type=str, default = "config/imagenetc/stfqvrf.yml")
-    parser.add_argument("--fbr_model_config_path", type=str, default = "config/imagenetc/stf.yml")
+    parser.add_argument("--vbr_model_config_path", type=str, default = "config/camvid/stfqvrf.yml")
+    parser.add_argument("--fbr_model_config_path", type=str, default = "config/camvid/stf.yml")
     args = parser.parse_args()
     main(args)
 

@@ -1,7 +1,7 @@
 # config.yml
 
 model_type:
-  stf
+  stfqvrf
 # mdoel args
 model:        
   image_channel: 3
@@ -11,8 +11,7 @@ model:
   embedding_dim: 40
   out_channel_m: 192
   out_channel_n: 128
-  lamda: 0.18
-  finetune_model_dir: null
+  stage: 2
   device: cuda   
 
 # trainning args
@@ -37,5 +36,5 @@ dataset:
   valid_data_path: camvid_train/val.jsonl
 
 logging:
-  eval_interval: 100           
-  save_dir: "./saved_model/fbr/camvid/stf"   
+  eval_interval: 100     
+  save_dir: "./saved_model/vbr/camvid/stfqvrf2"   
