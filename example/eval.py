@@ -11,8 +11,9 @@ from compressai.utils import load_config
 def main(args):
     config = load_config(args.model_config_path)
 
-    lamdas = [0.18]
+    lamdas = [0.0018, 0.0067, 0.0130, 0.025, 0.0483, 0.0932]
     bpps = []
+    ssims = []
     psnrs=[]
     """ get model"""
     net = models[config["model_type"]](**config["model"]).to(config["model"]["device"])
@@ -41,9 +42,11 @@ def main(args):
         ret = net.eval_model(val_dataloader = dataloader)
         psnrs.append(float(ret["PSNR"]))
         bpps.append(float(ret["bpp"]))
+        ssims.append(float(ret["ssim"]))
         data = {
             "PSNR":psnrs,
-            "bpp":bpps
+            "bpp":bpps,
+            "ssim":ssims
         }
     
     with open(args.save_path, "w") as f:
@@ -53,9 +56,9 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/stf.yml")
+    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/vic.yml")
     parser.add_argument("--data_path", type=str, default = "imagenet_train/test.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/fbr/imagenet/stf/")
+    parser.add_argument("--model_path", type=str, default = "saved_model/fbr/imagenet/vic/")
     parser.add_argument("--save_path", type=str, default = "result/vic-imagenet.json")
     args = parser.parse_args()
     main(args)

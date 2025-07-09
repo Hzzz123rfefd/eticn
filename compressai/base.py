@@ -188,6 +188,7 @@ class ModelCompressionBase(ModelBase):
     def eval_model(self, val_dataloader):
         psnr = AverageMeter()
         bpp = AverageMeter()
+        ssim = AverageMeter()
         with torch.no_grad():
             for batch_id,inputs in enumerate(val_dataloader):
                 b, c, h, w = inputs["image"].shape
@@ -200,11 +201,13 @@ class ModelCompressionBase(ModelBase):
                 )
                 for i in range(b):
                     psnr.update(calculate_psnr(output["reconstruction_image"][i].cpu() * 255, inputs["image"][i].cpu() * 255))
+                    ssim.update(calculate_ssim(output["reconstruction_image"][i,:,:,:].cpu().numpy() * 255, inputs["image"][i,:,:,:].cpu().numpy() * 255))
     
-        print("PSNR = {:.4f}, BPP = {:.2f}\n".format(psnr.avg, bpp.avg))
+        print("PSNR = {:.4f}, ssim = {:.4f}, BPP = {:.2f}\n".format(psnr.avg, ssim.avg, bpp.avg))
         output = {
             "PSNR": psnr.avg,
-            "bpp": bpp.avg
+            "bpp": bpp.avg,
+            "ssim":ssim.avg
         }
         return output
     
