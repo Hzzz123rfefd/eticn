@@ -11,8 +11,8 @@ from compressai.utils import load_config
 def main(args):
     config = load_config(args.model_config_path)
 
-    # lamdas = [0.0018, 0.0067, 0.0130, 0.025, 0.0483, 0.0932]
-    lamdas = [0.18]
+    lamdas = [0.0018, 0.0067, 0.0130, 0.025, 0.0483, 0.0932]
+    # lamdas = [0.18]
     bpps = []
     ssims = []
     psnrs=[]
@@ -47,7 +47,7 @@ def main(args):
         data = {
             "PSNR":psnrs,
             "bpp":bpps,
-            "ssim":ssims
+            "ms-ssim":ssims
         }
     
     with open(args.save_path, "w") as f:
@@ -57,9 +57,9 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/camvid/stf.yml")
-    parser.add_argument("--data_path", type=str, default = "camvid_train/test.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/fbr/camvid/stf/")
-    parser.add_argument("--save_path", type=str, default = "result/vic-imagenet.json")
+    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/vaic.yml")
+    parser.add_argument("--data_path", type=str, default = "imagenet_train/test.jsonl")
+    parser.add_argument("--model_path", type=str, default = "saved_model/fbr/imagenet/vaic/")
+    parser.add_argument("--save_path", type=str, default = "result/vbr/imagenet/vaic/Reference.json")
     args = parser.parse_args()
     main(args)

@@ -16,4 +16,5 @@ imagenet
 *.docx
 *train
 *.vsdx
+camvid_train
 

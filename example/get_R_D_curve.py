@@ -76,6 +76,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir_path',type=str, default="result/vbr/imagenet/")
+    parser.add_argument('--dir_path',type=str, default="result/vbr/imagenet/vic")
     args = parser.parse_args()
     main(args)
