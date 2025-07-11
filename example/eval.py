@@ -57,9 +57,9 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/vaic.yml")
+    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/stf.yml")
     parser.add_argument("--data_path", type=str, default = "imagenet_train/test.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/fbr/imagenet/vaic/")
-    parser.add_argument("--save_path", type=str, default = "result/vbr/imagenet/vaic/Reference.json")
+    parser.add_argument("--model_path", type=str, default = "saved_model/fbr/imagenet/stf/")
+    parser.add_argument("--save_path", type=str, default = "result/vbr/imagenet/stf/Reference.json")
     args = parser.parse_args()
     main(args)

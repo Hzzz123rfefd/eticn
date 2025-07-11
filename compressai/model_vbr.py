@@ -342,8 +342,8 @@ class GRIC_CQVR(ModelCQVRBase):
             side_ctx = self.side_context(z_hat)
 
             """ get local message """
-            local_ctx = self.local_context(y_hat)
             y_hat, noisy, predict_noisy = self.y_hat_enhance(y, scale, rescale, s, b)
+            local_ctx = self.local_context(y_hat)
             
             """ get global message """
             global_ctx = self.global_context(y_hat,local_ctx)
