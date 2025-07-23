@@ -54,6 +54,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/stfcqvr2.yml")
+    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/vaiccqvr2.yml")
     args = parser.parse_args()
     main(args)

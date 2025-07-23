@@ -20,10 +20,10 @@ def R_D_SSIM(bpp_lists, msssim_lists, models):
         if model == "BPG" or model == "JEPG2000" or model == "VVC":
             plt.plot(bpp, psnr, marker='o', label=model, linestyle='--')
         else:
-            plt.plot(bpp, psnr, marker='o', label=model)
+            plt.plot(bpp, psnr, marker='o', label=model) 
     plt.xlabel('bpp')
-    plt.ylabel('ms-ssim')
-    plt.legend()
+    plt.ylabel('MS-SSIM(db)')
+    plt.legend(loc='lower right')
     plt.grid(True)
     plt.savefig(args.dir_path + "/bpp_ssim.png", dpi = 700)
     plt.show()
@@ -45,7 +45,7 @@ def R_D_PSNR(bpp_lists, psnr_lists, models):
             plt.plot(bpp, psnr, marker='o', label=model)
     plt.xlabel('bpp')
     plt.ylabel('PSNR(db)')
-    plt.legend()
+    plt.legend(loc='lower right')
     plt.grid(True)
     plt.savefig(args.dir_path + "/bpp_psnr.png", dpi = 700)
     plt.show()
@@ -76,6 +76,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir_path',type=str, default="result/vbr/imagenet/stf")
+    parser.add_argument('--dir_path',type=str, default="result/vbr/JPEG/gric")
     args = parser.parse_args()
     main(args)

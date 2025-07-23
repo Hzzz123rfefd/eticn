@@ -59,7 +59,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base_result_path", type=str, default = "result/eticn.json")
-    parser.add_argument("--target_result_path", type=str, default = "result/eticncqvr-no-diffusion.json")
+    parser.add_argument("--base_result_path", type=str, default = "result/vbr/imagenet/gric/Reference.json")
+    parser.add_argument("--target_result_path", type=str, default = "result/vbr/imagenet/gric/Proposed-2.json")
     args = parser.parse_args()
     main(args)

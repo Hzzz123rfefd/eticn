@@ -224,6 +224,7 @@ class ModelCompressionBase(ModelBase):
         if lamda == None:
             self.load_state_dict(torch.load(save_model_dir  + "/model.pth"))
         else:
+            a = torch.load(save_model_dir + str(lamda) + "/model.pth")
             self.load_state_dict(torch.load(save_model_dir + str(lamda) + "/model.pth"))
 
     def save_pretrained(self, save_model_dir, lamda = None):

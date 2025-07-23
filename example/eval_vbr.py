@@ -38,13 +38,13 @@ def main(args):
     ret = net.eval_model(val_dataloader = dataloader)
     with open(args.save_path, "w") as f:
         json.dump(ret, f, indent=4)
-    
+
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/stfcqvr2.yml")
-    parser.add_argument("--data_path", type=str, default = "imagenet_train/test.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/vbr/imagenet/stfcqvr2/")
-    parser.add_argument("--save_path", type=str, default = "result/vbr/imagenet/stf/Proposed-2.json")
+    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/griccqvr3.yml")
+    parser.add_argument("--data_path", type=str, default = "JPEG_train/vaild.jsonl")
+    parser.add_argument("--model_path", type=str, default = "saved_model/vbr/imagenet/griccqvr3/")
+    parser.add_argument("--save_path", type=str, default = "result/vbr/JPEG/gric/Proposed.json")
     args = parser.parse_args()
     main(args)

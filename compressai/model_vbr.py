@@ -407,7 +407,6 @@ class VIC_QVRF(ModelQVRFBase):
 
     def forward(self, inputs, s = 1, is_train = True):
         image = inputs["image"].to(self.device)
-        b, _, _, _ = image.shape
         scale, rescale, s = self.get_scale(s, is_train)
         
         if self.stage <= 2:

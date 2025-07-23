@@ -351,6 +351,64 @@ class VIC(ModelCompressionBase):
         }
         return output
 
+class VIC2(ModelCompressionBase):
+    def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
+        self.N = self.out_channel_n
+        self.M = self.out_channel_m
+        self.image_height = image_height
+        self.image_weight = image_weight
+        self.g_a = nn.Sequential(
+            conv(3, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.M, kernel_size=5, stride=2),
+        )
+        self.g_s = nn.Sequential(
+            deconv(self.M, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, 3, kernel_size=5, stride=2),
+        )
+        self.h_a = nn.Sequential(
+            conv(self.M, self.N, stride=1, kernel_size=3),
+            nn.LeakyReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+            nn.LeakyReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+        )
+        self.h_s = nn.Sequential(
+            deconv(self.N, self.N, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            deconv(self.N, self.N, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            conv(self.N, self.M, stride=1, kernel_size=3),
+            nn.ReLU(inplace=True),
+        )
+    
+    def forward(self,inputs):
+        image = inputs["image"].to(self.device)
+        y = self.g_a(image)
+        z = self.h_a(y)
+        z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        scales_hat = F.interpolate(self.h_s(z_hat), size=((int)(self.image_height/16), (int)(self.image_weight/16)), mode='bilinear', align_corners=False)
+        y_hat, y_likelihoods = self.gaussian_conditional(y, scales_hat)
+        x_hat = self.g_s(y_hat)
+        x_hat = torch.clamp(x_hat, 0, 1)
+        output = {
+            "image":inputs["image"].to(self.device),
+            "reconstruction_image":x_hat,
+            "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+            "lamda": self.lamda
+        }
+        return output
+
 class VAIC(ModelCompressionBase):
     def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device):
         super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
