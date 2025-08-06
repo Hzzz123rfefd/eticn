@@ -16,6 +16,6 @@ def resize_images(input_folder, output_folder, width=500, height=375):
             print(f"已处理: {filename}")
 
 if __name__ == "__main__":
-    input_folder = "datasets/clic/valid"  # 修改为你的输入文件夹路径
-    output_folder = "datasets/clic/valid"  # 修改为你的输出文件夹路径
+    input_folder = "datasets/clic/valid"  
+    output_folder = "datasets/clic/valid"
     resize_images(input_folder, output_folder)
