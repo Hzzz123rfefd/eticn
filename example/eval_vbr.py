@@ -43,8 +43,8 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/griccqvr3.yml")
-    parser.add_argument("--data_path", type=str, default = "JPEG_train/vaild.jsonl")
+    parser.add_argument("--data_path", type=str, default = "clic_train/vaild.jsonl")
     parser.add_argument("--model_path", type=str, default = "saved_model/vbr/imagenet/griccqvr3/")
-    parser.add_argument("--save_path", type=str, default = "result/vbr/JPEG/gric/Proposed.json")
+    parser.add_argument("--save_path", type=str, default = "result/2-fig6/clic.json")
     args = parser.parse_args()
     main(args)

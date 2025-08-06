@@ -7,13 +7,32 @@ from skimage.metrics import structural_similarity as ssim
 import numpy as np
 from tqdm import tqdm
 sys.path.append(os.getcwd())
-
+from pathlib import Path
 import argparse
 
 
 qualities_jepg = [10,15,22,31,42]
 qualities_bpg = [34,32,30,27,25,23,21,19]
 qualities_vvc = [45,43,40,38,36,34,32,30]
+
+def read_image(image_path):
+    image = cv2.imread(image_path)
+    resized_image = cv2.resize(image, (512, 512))
+    if len(resized_image.shape) == 2:  
+        resized_image = np.expand_dims(image, axis=0)
+    return resized_image
+
+def load_data(jsonl_path):
+    images = []
+    with open(jsonl_path, 'r') as f:
+        for line in f:
+            item = json.loads(line.strip())
+            img = read_image(item["image_path"])
+            img_np = np.array(img).transpose(2, 0, 1)  
+            images.append(img_np)
+    images_array = np.stack(images)  
+    return images_array
+
 class AverageMeter:
     """Compute running average."""
 
@@ -60,8 +79,6 @@ def calculate_bpp_psnr_jepg(image,quality):
     return real_bpp,mse,psnr,ssim
 
 def calculate_bpp_psnr_bpg(image,quality):
-    width = image.shape[1]
-    height = image.shape[0]
     tem_output_image = "bpg_tem.png"
     temp_hevc_path = 'temp.hevc'
     tem_png_path = 'bpg_re_temp.png'
@@ -212,7 +229,7 @@ def operate_jepg(images):
     return {
         "bpp": bpps,
         "mse": mses,
-        "psnr": psnrs,
+        "PSNR": psnrs,
         "ms-ssim":msssims
     }
 
@@ -244,7 +261,7 @@ def operate_bpg(images):
     return {
         "bpp": bpps,
         "mse": mses,
-        "psnr": psnrs,
+        "PSNR": psnrs,
         "ms-ssim":msssims
     }
 
@@ -276,13 +293,13 @@ def operate_vvc(images):
     return {
         "bpp": bpps,
         "mse": mses,
-        "psnr": psnrs,
+        "PSNR": psnrs,
         "ms-ssim":msssims
     }   
 
 def main(args):
     """ get data """
-    images = np.memmap(args.data_path, dtype=np.uint8, mode='r', shape=(args.image_number,) + (args.image_channel, args.image_height, args.image_width), offset=0)
+    images = load_data(args.data_path)
 
     """ operator """
     if args.type == "jepg":
@@ -293,20 +310,14 @@ def main(args):
         ret = operate_vvc(images)
 
     print(ret)
-    "save result"
+    # "save result"
     with open(args.result_path, 'w') as file:
         json.dump(ret, file, indent=4)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--type",type = str, default = "vvc")
-    parser.add_argument('--data_path',type=str, default= "data/camvid.npy")
-    parser.add_argument('--image_number',type=int, default= 600)
-    parser.add_argument('--image_channel',type=int, default= 3)
-    parser.add_argument('--image_height',type=int, default= 512)
-    parser.add_argument('--image_width',type=int, default= 512)
-    parser.add_argument('--result_path',type=str, default="result/bpp_psnr/base/camvid/vvc-new.json")
+    parser.add_argument("--type",type = str, default = "bpg")
+    parser.add_argument('--data_path',type=str, default= "imagenet_train/test.jsonl")
+    parser.add_argument('--result_path',type=str, default="result/vbr/imagenet/tradition/bpg.json")
     args = parser.parse_args()
     main(args)
-
-# python example/get_bpp_psnr_json_traditional.py --type bpg --data_path data/soda.npy --image_number 600 --image_channel 3 --image_height 512 --image_width 512 --result_path soda_bpg.json

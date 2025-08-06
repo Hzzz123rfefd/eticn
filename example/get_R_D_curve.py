@@ -17,7 +17,7 @@ def R_D_SSIM(bpp_lists, msssim_lists, models):
         'legend.fontsize': '12'
     })
     for bpp, psnr, model in zip(bpp_lists, msssim_lists, models):
-        if model == "BPG" or model == "JEPG2000" or model == "VVC":
+        if model == "BPG" or model == "JEPG2000" or model == "VVC" or model == "[BPG]" or model == "[JEPG2000]" or model == "[VVC]" or model == "[Baseline]":
             plt.plot(bpp, psnr, marker='o', label=model, linestyle='--')
         else:
             plt.plot(bpp, psnr, marker='o', label=model) 
@@ -39,7 +39,7 @@ def R_D_PSNR(bpp_lists, psnr_lists, models):
         'legend.fontsize': '12'
     })
     for bpp, psnr, model in zip(bpp_lists, psnr_lists, models):
-        if model == "BPG" or model == "JEPG2000" or model == "VVC":
+        if model == "BPG" or model == "JEPG2000" or model == "VVC"or model == "[BPG]" or model == "[JEPG2000]" or model == "[VVC]" or model == "[Baseline]":
             plt.plot(bpp, psnr, marker='o', label=model, linestyle='--')
         else:
             plt.plot(bpp, psnr, marker='o', label=model)
@@ -76,6 +76,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir_path',type=str, default="result/vbr/JPEG/gric")
+    parser.add_argument('--dir_path',type=str, default="result/2-fig5/vic")
     args = parser.parse_args()
     main(args)

@@ -19,7 +19,6 @@ def main(args):
     net = models[config["model_type"]](**config["model"])
     
     """get data loader"""
-    """get data loader"""
     dataset = datasets[config["dataset_type"]](
         target_width = config["dataset"]["target_width"],
         target_height = config["dataset"]["target_height"],
