@@ -17,5 +17,5 @@ imagenet
 *train
 *.vsdx
 *.~vsdx
-camvid_train
-
+*.pdf
+doc
