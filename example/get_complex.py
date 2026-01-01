@@ -29,3 +29,4 @@ if __name__ == "__main__":
     parser.add_argument("--model_config_path", type=str, default = "config/camvid/vic.yml")
     args = parser.parse_args()
     main(args)
+    

@@ -100,3 +100,4 @@ if __name__ == "__main__":
     parser.add_argument("--save_dir", type=str, default = "result/2-fig2")
     args = parser.parse_args()
     main(args)
+    

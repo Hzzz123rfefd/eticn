@@ -13,23 +13,6 @@ colors = {
     'train': [128, 64, 192]   
 }
 
-# def get_label(folder_path,is_save = False):
-#     images_array = []
-#     for filename in os.listdir(folder_path):
-#         if filename.endswith(('.jpg', '.jpeg', '.png')):  
-#             image_path = os.path.join(folder_path, filename)
-#             image = cv2.imread(image_path)
-#             gray_image = np.ones((image.shape[0], image.shape[1]), dtype=np.uint8) * 255
-#             for color_name, rgb_value in colors.items():
-#                 mask = cv2.inRange(image, np.array(rgb_value) - np.array([10, 10, 10]), np.array(rgb_value) + np.array([10, 10, 10]))
-#                 gray_image[mask == 255] = 0
-#             images_array.append(gray_image)
-
-#     images_array = np.array(images_array)
-#     print("data shape:",images_array.shape)
-#     if(is_save):
-#         np.save("npy_data/binary_data.npy",images_array)
-        
 def get_label(label_path):
     image = cv2.imread(label_path)
     label = np.ones((image.shape[0], image.shape[1]), dtype=np.uint8) * 255
@@ -50,8 +33,6 @@ def get_train_data(data_dir, label_dir, output_path, output_label_dir):
                     cv2.imwrite(output_label_dir + label_filename, label)
                     record = {"image_path": image_path, "label_path": output_label_dir + label_filename}
                     jsonl_file.write(json.dumps(record) + "\n")
-
-    
 
 def main(args):
     shutil.rmtree(args.output_dir)
@@ -78,8 +59,6 @@ def main(args):
         output_label_dir = args.output_dir + "label/",
     )
     
-    
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_dir",type=str,default = "camvid_train/")

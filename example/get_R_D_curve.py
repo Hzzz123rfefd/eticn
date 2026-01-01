@@ -68,6 +68,7 @@ def R_D_PSNR(bpp_lists, psnr_lists, models):
     plt.savefig(args.dir_path + "/bpp_psnr.png", dpi = 700)
     plt.show()
 
+
 def main(args):
     models = []
     bpp_lists = []

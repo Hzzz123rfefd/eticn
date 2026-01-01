@@ -1,7 +1,7 @@
 import torch
 
-model = torch.load("saved_model/fbr/camvid/stf/0.0932/model.pth")
-
+save_path = "saved_model/fbr/soda/eticn/0.0018/model.pth"
+model = torch.load(save_path)
 a = model["state_dict"]
 # new_state_dict = {}
 # for k, v in a.items():
@@ -17,6 +17,5 @@ a = model["state_dict"]
 #         new_key = k
 #     new_state_dict[new_key] = v
 # torch.save(new_state_dict, "saved_model/fbr/camvid/vic/0.0018/model.pth")
-
-torch.save(a , "saved_model/fbr/camvid/stf/0.0932/model.pth")
+torch.save(a , save_path)
 

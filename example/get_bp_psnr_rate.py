@@ -63,3 +63,4 @@ if __name__ == "__main__":
     parser.add_argument("--target_result_path", type=str, default = "result/vbr/imagenet/gric/Proposed-2.json")
     args = parser.parse_args()
     main(args)
+    

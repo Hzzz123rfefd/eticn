@@ -63,3 +63,5 @@ if __name__ == "__main__":
     parser.add_argument("--save_path", type=str, default = "result/vbr/JPEG/gric/Reference.json")
     args = parser.parse_args()
     main(args)
+    
+# python example/eval.py --model_config_path config/camvid/eticn.yml --data_path camvid_train/vaild.jsonl --model_path saved_model/fbr/camvid/eticn/ --save_path result/vbr/JPEG/gric/Reference.json

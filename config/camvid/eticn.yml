@@ -48,8 +48,6 @@ dataset:
   test_data_path: camvid_train/test.jsonl
   valid_data_path: camvid_train/val.jsonl
 
-
-
 logging:
   eval_interval: 100           
-  save_dir: "./saved_model/fbr/eticn-camvid"   
+  save_dir: "./saved_model/fbr/camvid/eticn"   
