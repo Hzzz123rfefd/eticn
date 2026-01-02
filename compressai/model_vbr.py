@@ -1,4 +1,3 @@
-import random
 import torch
 from compressai.entropy_models import *
 from compressai.modules import *
@@ -378,16 +377,27 @@ class ETICN_CQVR(ModelCQVRBase):
         window_size,
         head_num,
         shift_size,
-        time_dim, 
         out_channel_m,
         out_channel_n,
+        group_num,
+        codebook_size,
         transfomer_head,
         transfomer_blocks,
+        time_dim,
         drop_prob = 0.1,
-        stage = 1,
+        stage = None,
+        sigma = 0.0001,
+        beta = 0.0001,
+        finetune_model_dir = None, 
+        university_pretrain_path = None,
         device = "cuda"
     ):
-        super().__init__(image_channel, image_height, image_weight, time_dim, out_channel_m, out_channel_n, stage, device)
+        super().__init__(image_channel, image_height, image_weight, time_dim, out_channel_m, out_channel_n, stage, finetune_model_dir, device)
+        self.sigma = sigma
+        self.beta = beta
+        self.university_pretrain_path = university_pretrain_path
+        self.group_num = group_num
+        self.codebook_size = codebook_size
         self.patch_size = patch_size
         self.embed_dim = embedding_dim
         self.window_size = window_size
@@ -441,7 +451,12 @@ class ETICN_CQVR(ModelCQVRBase):
             conv(out_channel_m * 3 // 2, out_channel_m * 2, kernel_size=3,stride = 1)
         ).to(self.device)
 
-
+        self.universal_context = UniversalContext(
+            out_channel_m = self.out_channel_m,
+            codebook_size = self.codebook_size,
+            group_num = self.group_num
+        ).to(self.device)
+        
         self.local_context = MaskedConv2d(
             in_channels = out_channel_m , 
             out_channels = 2 * out_channel_m, 
@@ -465,6 +480,14 @@ class ETICN_CQVR(ModelCQVRBase):
             nn.LeakyReLU(inplace=True),
             nn.Conv2d(out_channel_m * 8 // 3, out_channel_m * 6 // 3, 1),
         ).to(self.device)
+
+        self.parm2 = nn.Sequential(
+            nn.Conv2d(out_channel_m * 15 // 3,out_channel_m * 10 // 3, 1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(out_channel_m * 10 // 3, out_channel_m * 8 // 3, 1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(out_channel_m * 8 // 3, out_channel_m * 6 // 3, 1),
+        ).to(self.device)
     
     def forward(self, inputs, s = 1, is_train = True):
         image = inputs["image"].to(self.device)
@@ -475,6 +498,9 @@ class ETICN_CQVR(ModelCQVRBase):
             image = inputs["image"].to(self.device)
             """ get latent vector """
             y, mid_feather = self.image_transform_encoder(image)
+
+            """ detect traffic element"""
+            logits,mask = self.tedm(image,mid_feather)
 
             """ get side message """
             z = self.hyperpriori_encoder(y)
@@ -488,25 +514,82 @@ class ETICN_CQVR(ModelCQVRBase):
             """ get global message """
             global_ctx = self.global_context(y_hat,local_ctx)
 
+            """ get university message"""
+            y_ = y * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
+            universal_ctx,y_ba,code_index = self.universal_context(y_)
+            y_ba = y_ba * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
+            universal_ctx = universal_ctx * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
+
             """ parameters estimation"""
             gaussian_params1 = self.parm1(
                 torch.concat((local_ctx,global_ctx,side_ctx),dim=1)
             )
-            scales_hat, means_hat = gaussian_params1.chunk(2, 1)
-            _, y_likelihoods = self.gaussian_conditional(y * scale - means_hat * scale, scales_hat * scale)
+            gaussian_params2 = self.parm2(
+                torch.concat((local_ctx,universal_ctx,side_ctx),dim=1)
+            )
+            scales_hat1, means_hat1 = gaussian_params1.chunk(2, 1)
+            scales_hat2, means_hat2 = gaussian_params2.chunk(2, 1)
+            scales_hat = scales_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + scales_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
+            means_hat = means_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + means_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
+
+
+            _,y_likelihoods = self.gaussian_conditional(y, scales_hat, means_hat)
             """ inverse transformation"""
             x_hat = self.image_transform_decoder(y_hat)
         x_hat = torch.clamp(x_hat,0,1)
         output = {
             "image":inputs["image"].to(self.device),
             "reconstruction_image":x_hat,
+            "feather":y_,
+            "zq":y_ba,
             "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+            "logits":logits,
+            "mask":mask,
+            "latent":y,
+            "labels":inputs["label"].long().to(self.device) if "label" in inputs else None,
             "noisy": noisy,
             "predict_noisy": predict_noisy,
             "lamda": self.lmbda[s]
         }
         return output
 
+    def trainning(            
+            self,
+            train_dataloader: DataLoader = None,
+            test_dataloader: DataLoader = None,
+            val_dataloader: DataLoader = None,
+            optimizer_name:str = "Adam",
+            weight_decay:float = 0,
+            clip_max_norm:float = 0.5,
+            factor:float = 0.3,
+            patience:int = 15,
+            lr:float = 1e-4,
+            total_epoch:int = 1000,
+            eval_interval:int = 10,
+            save_model_dir:str = None
+        ):
+            if self.university_pretrain_path:
+                print("use university pretrain...")
+                assert self.university_pretrain_path != None, "use university pretrain,but there is no university pretrain path"
+                parameters = np.load(self.university_pretrain_path) # (g_n,c_s,g_s)
+                parameters = torch.from_numpy(parameters)
+                self.universal_context.from_pretrain(parameters,requires_grad = False)
+                
+            super().trainning(train_dataloader, test_dataloader, val_dataloader, optimizer_name, weight_decay, clip_max_norm, factor, patience, lr, total_epoch, eval_interval, save_model_dir)
+
+    def compute_loss(self, input):
+        output = super().compute_loss(input)
+        """ codebook loss """
+        output["codebook_loss"] =  F.mse_loss(input["zq"].detach(), input["feather"]) + 0.25 * F.mse_loss(input["zq"], input["feather"].detach())
+
+        """ mask loss """
+        true_labels = input["labels"]
+        pre_labels = F.interpolate(input["logits"], scale_factor=16, mode='bicubic', align_corners=True)
+        output["mask_loss"] = F.cross_entropy(pre_labels, true_labels)
+        output["total_loss"] =  output["total_loss"] + self.sigma * output["codebook_loss"] + self.beta * output["mask_loss"]
+        # print(f"mask_loss = {output['mask_loss']}, mask_loss = {output['mask_loss']}")
+        return output
+    
 class VIC_QVRF(ModelQVRFBase):
     def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device):
         super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device)

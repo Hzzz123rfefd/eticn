@@ -1,5 +1,5 @@
 from compressai.model import ETICN, ETICNQVRF, ETICNCQVR, STF, VIC, VIC2, VAIC, GRIC
-from compressai.model_vbr import VIC_CQVR, VAIC_CQVR, STF_CQVR, GRIC_CQVR, STF_QVRF, VAIC_QVRF, VIC_QVRF, GRIC_QVRF
+from compressai.model_vbr import VIC_CQVR, VAIC_CQVR, STF_CQVR, GRIC_CQVR, STF_QVRF, VAIC_QVRF, VIC_QVRF, GRIC_QVRF, ETICN_CQVR
 from compressai.dataset import DatasetForETICN, DatasetForImageCompression
 
 
@@ -26,7 +26,7 @@ models = {
     "vaiccqvr": VAIC_CQVR,
     "stfcqvr": STF_CQVR,
     "griccqvr":GRIC_CQVR, 
-    "eticncqvr": ETICNCQVR
+    "eticncqvr": ETICN_CQVR
 }
 
 

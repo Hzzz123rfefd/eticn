@@ -48,3 +48,4 @@ if __name__ == "__main__":
     parser.add_argument("--save_path", type=str, default = "result/2-fig6/clic.json")
     args = parser.parse_args()
     main(args)
+    

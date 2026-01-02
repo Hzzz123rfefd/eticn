@@ -224,7 +224,6 @@ class ModelCompressionBase(ModelBase):
         if lamda == None:
             self.load_state_dict(torch.load(save_model_dir  + "/model.pth"))
         else:
-            a = torch.load(save_model_dir + str(lamda) + "/model.pth")
             self.load_state_dict(torch.load(save_model_dir + str(lamda) + "/model.pth"))
 
     def save_pretrained(self, save_model_dir, lamda = None):
@@ -242,9 +241,10 @@ class ModelQVRFBase(ModelCompressionBase):
         out_channel_m, 
         out_channel_n, 
         stage = 1,
+        finetune_model_dir = None, 
         device = "cuda"
     ):
-        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, None, None, device)
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, None, finetune_model_dir, device)
         self.Gain = torch.nn.Parameter(torch.tensor(
             [1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]), requires_grad = True)
         self.stage = stage
@@ -325,11 +325,26 @@ class ModelQVRFBase(ModelCompressionBase):
         }
         return output
 
-    def load_pretrained(self, save_model_dir):
-        self.load_state_dict(torch.load(save_model_dir + "/model.pth"))
+    def configure_train_set(self, save_model_dir):
+        if self.stage != None:
+            self.save_model_dir = save_model_dir  + "/" + "stage" + str(self.stage)
+        else:
+            self.save_model_dir = save_model_dir
+        self.first_trainning = True
+        self.check_point_path = self.save_model_dir  + "/checkpoint.pth"
+        self.log_path = self.save_model_dir + "/train.log"
 
-    def save_pretrained(self, save_model_dir):
-        torch.save(self.state_dict(), save_model_dir + "/model.pth")
+    def load_pretrained(self, save_model_dir, stage = None):
+        if stage == None:
+            self.load_state_dict(torch.load(save_model_dir + "/model.pth"), strict=False)
+        else:
+            self.load_state_dict(torch.load(save_model_dir + "stage" + int(stage) + "/model.pth"))
+
+    def save_pretrained(self, save_model_dir, stage = None):
+        if stage == None:
+            torch.save(self.state_dict(), save_model_dir + "/model.pth")
+        else:
+            torch.save(self.state_dict(), save_model_dir + "stage" + int(stage) + "/model.pth")
         
 class ModelCQVRBase(ModelQVRFBase):        
     def __init__(
@@ -341,9 +356,10 @@ class ModelCQVRBase(ModelQVRFBase):
         out_channel_m, 
         out_channel_n, 
         stage = 1,
+        finetune_model_dir = None, 
         device = "cuda"
     ):
-        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device)
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, finetune_model_dir, device)
         self.time_dim = time_dim
         self.Gain = torch.nn.Parameter(torch.tensor(
              [[1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]] * self.out_channel_m, dtype=torch.float32), requires_grad=True)

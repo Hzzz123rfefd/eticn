@@ -61,9 +61,9 @@ def R_D_PSNR(bpp_lists, psnr_lists, models):
     plt.legend(loc='lower right')
     plt.grid(True)
     
-    fixed_order = ['Baseline [Qian (ICLR2022)]', '[Proposed Methed]', '[Tong (NIPS2023)]', '[VVC]', '[BPG]', '[JEPG2000]']
-    ordered_handles = [lines_dict[lab] for lab in fixed_order if lab in lines_dict]
-    plt.legend(ordered_handles, [lab for lab in fixed_order if lab in lines_dict], loc='lower right')
+    # fixed_order = ['Baseline [Qian (ICLR2022)]', '[Proposed Methed]', '[Tong (NIPS2023)]', '[VVC]', '[BPG]', '[JEPG2000]']
+    # ordered_handles = [lines_dict[lab] for lab in fixed_order if lab in lines_dict]
+    # plt.legend(ordered_handles, [lab for lab in fixed_order if lab in lines_dict], loc='lower right')
     
     plt.savefig(args.dir_path + "/bpp_psnr.png", dpi = 700)
     plt.show()
@@ -95,6 +95,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir_path',type=str, default="result/2-fig5/gric")
+    parser.add_argument('--dir_path',type=str, default="result/R-D/fbr/camvid")
     args = parser.parse_args()
     main(args)

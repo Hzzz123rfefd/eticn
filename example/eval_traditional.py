@@ -278,14 +278,17 @@ def operate_vvc(images):
         psnr = AverageMeter()
         msssim = AverageMeter()
         for i in tqdm(range(int(image_number)), desc=f'quality = {quality}'):
-            real_bpp, mse, psnr_, msssim_ = calculate_bpp_psnr_vvc(
-                image = images[i,:,:,:].transpose(1, 2, 0),
-                quality = quality
-            )
-            reconstruction_loss.update(mse)
-            bpp_loss.update(real_bpp)
-            psnr.update(psnr_)
-            msssim.update(msssim_)
+            try:
+                real_bpp, mse, psnr_, msssim_ = calculate_bpp_psnr_vvc(
+                    image = images[i,:,:,:].transpose(1, 2, 0),
+                    quality = quality
+                )
+                reconstruction_loss.update(mse)
+                bpp_loss.update(real_bpp)
+                psnr.update(psnr_)
+                msssim.update(msssim_)
+            except Exception as e:
+                print(f"[Warning] VVC failed at image {i}: {e}")
         mses.append(reconstruction_loss.avg.item())
         bpps.append(bpp_loss.avg)
         psnrs.append(psnr.avg.item())
@@ -321,3 +324,5 @@ if __name__ == "__main__":
     parser.add_argument('--result_path',type=str, default="result/vbr/imagenet/tradition/bpg.json")
     args = parser.parse_args()
     main(args)
+    
+# python example/eval_traditional.py --type jepg --data_path camvid_train/vaild.jsonl --result_path result/R-D/fbr/jepg_camvid.json

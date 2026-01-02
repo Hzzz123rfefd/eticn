@@ -1,6 +1,6 @@
 import torch
 
-save_path = "saved_model/fbr/soda/eticn/0.0018/model.pth"
+save_path = "saved_model/fbr/soda/eticn/0.013/model.pth"
 model = torch.load(save_path)
 a = model["state_dict"]
 # new_state_dict = {}

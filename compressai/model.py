@@ -28,7 +28,7 @@ class ETICN(ModelCompressionBase):
         transfomer_head,
         transfomer_blocks,
         drop_prob = 0.1,
-        stage = 2,
+        stage = None,
         lamda = None,
         sigma = 0.0001,
         beta = 0.0001,
