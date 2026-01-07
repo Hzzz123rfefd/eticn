@@ -1349,3 +1349,189 @@ class ETICN_VGVRF(ModelVGVRFBase):
             "lamda": self.lmbda[s]
         }
         return output
+    
+class ETICN_STVRF(ModelSTanhVRFBase):
+    def __init__(
+        self,
+        image_channel,
+        image_height,
+        image_weight,
+        patch_size,
+        embedding_dim,
+        window_size,
+        head_num,
+        shift_size,
+        out_channel_m,
+        out_channel_n,
+        group_num,
+        codebook_size,
+        transfomer_head,
+        transfomer_blocks,
+        drop_prob = 0.1,
+        sigma = 0.0001,
+        beta = 0.0001,
+        finetune_model_dir = None, 
+        university_pretrain_path = None,
+        device = "cuda"
+    ):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
+        self.sigma = sigma
+        self.beta = beta
+        self.university_pretrain_path = university_pretrain_path
+        self.group_num = group_num
+        self.codebook_size = codebook_size
+        self.patch_size = patch_size
+        self.embed_dim = embedding_dim
+        self.window_size = window_size
+        self.head_num = head_num
+        self.shift_size = shift_size
+        self.transfomer_head = transfomer_head
+        self.transfomer_blocks = transfomer_blocks
+        self.drop_prob = drop_prob
+        self.feather_shape = [
+            embedding_dim*8,
+            (int)(self.image_shape[1]/patch_size/8),
+            (int)(self.image_shape[2]/patch_size/8)
+        ]
+        
+        self.image_transform_encoder = Encoder(
+            image_shape = self.image_shape,
+            patch_size = self.patch_size,
+            embed_dim = self.embed_dim,
+            window_size = window_size,
+            head_num = head_num,
+            shift_size = shift_size,
+            out_channel_m = self.out_channel_m
+        ).to(self.device)
+
+        self.image_transform_decoder = Decoder(
+            image_shape = self.image_shape,
+            patch_size = self.patch_size,
+            embed_dim = embedding_dim,
+            window_size = window_size,
+            head_num=head_num,
+            shift_size=shift_size,                                    
+            out_channel_m= out_channel_m
+        ).to(self.device)
+
+        self.tedm = TEDM(
+            in_c = self.image_shape[0], 
+            embed_dim = embedding_dim
+        ).to(self.device)
+
+        self.hyperpriori_encoder = HyperprioriEncoder(
+            feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
+            out_channel_m = out_channel_m,
+            out_channel_n = out_channel_n
+        ).to(self.device)
+
+        self.side_context = nn.Sequential(
+            deconv(out_channel_n, out_channel_m, kernel_size = 5,stride = 2),
+            nn.LeakyReLU(inplace=True),
+            deconv(out_channel_m, out_channel_m * 3 // 2,kernel_size = 5,stride = 2),
+            nn.LeakyReLU(inplace=True),
+            conv(out_channel_m * 3 // 2, out_channel_m * 2, kernel_size=3,stride = 1)
+        ).to(self.device)
+
+        self.local_context = MaskedConv2d(
+            in_channels = out_channel_m , 
+            out_channels = 2 * out_channel_m, 
+            kernel_size = 5, 
+            padding = 2, 
+            stride = 1
+        ).to(self.device)
+
+        self.universal_context = UniversalContext(
+            out_channel_m = self.out_channel_m,
+            codebook_size = self.codebook_size,
+            group_num = self.group_num
+        ).to(self.device)
+
+        self.global_context = GlobalContext(
+            head = transfomer_head ,
+            layers= transfomer_blocks,
+            d_model_1 = out_channel_m,
+            d_model_2 = out_channel_m * 2,
+            drop_prob = drop_prob
+        ).to(self.device)
+        
+        self.parm1 = nn.Sequential(
+            nn.Conv2d(out_channel_m * 15 // 3,out_channel_m * 10 // 3, 1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(out_channel_m * 10 // 3, out_channel_m * 8 // 3, 1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(out_channel_m * 8 // 3, out_channel_m * 6 // 3, 1),
+        ).to(self.device)
+
+        self.parm2 = nn.Sequential(
+            nn.Conv2d(out_channel_m * 15 // 3,out_channel_m * 10 // 3, 1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(out_channel_m * 10 // 3, out_channel_m * 8 // 3, 1),
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(out_channel_m * 8 // 3, out_channel_m * 6 // 3, 1),
+        ).to(self.device)
+
+    def forward(self, inputs, s = 1, is_train = True):
+        image = inputs["image"].to(self.device)
+        if is_train == True:
+            s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+            w = self.W[:, s]
+            b = self.B[:, s]
+        else:
+            w = self.W[:, s]
+            b = self.B[:, s]
+        
+        """ get latent vector """
+        y, mid_feather = self.image_transform_encoder(image)
+        
+        """ detect traffic element"""
+        logits,mask = self.tedm(image,mid_feather)
+        
+        y_hat = self.quantize(y, w, b)
+
+        """ get side message """
+        z = self.hyperpriori_encoder(y_hat)
+        z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        side_ctx = self.side_context(z_hat)
+
+        """ get local message """
+        local_ctx = self.local_context(y_hat)
+        
+        """ get global message """
+        global_ctx = self.global_context(y_hat, local_ctx)
+
+        """ get university message"""
+        y_ = y * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
+        universal_ctx, y_ba, code_index = self.universal_context(y_)
+        y_ba = y_ba * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
+        universal_ctx = universal_ctx * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
+
+        """ parameters estimation"""
+        gaussian_params1 = self.parm1(
+            torch.concat((local_ctx, global_ctx,side_ctx),dim=1)
+        )
+        gaussian_params2 = self.parm2(
+            torch.concat((local_ctx, universal_ctx,side_ctx),dim=1)
+        )
+        scales_hat1, means_hat1 = gaussian_params1.chunk(2, 1)
+        scales_hat2, means_hat2 = gaussian_params2.chunk(2, 1)
+        scales_hat = scales_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + scales_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
+        means_hat = means_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + means_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
+
+        _,y_likelihoods = self.gaussian_conditional(y_hat, scales_hat, means_hat)
+        """ inverse transformation"""
+        x_hat = self.image_transform_decoder(y_hat)
+        x_hat = torch.clamp(x_hat, 0, 1)
+        output = {
+            "image":inputs["image"].to(self.device),
+            "reconstruction_image":x_hat,
+            "feather":y_,
+            "zq":y_ba,
+            "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+            "logits":logits,
+            "mask":mask,
+            "latent":y,
+            "labels":inputs["label"].long().to(self.device) if "label" in inputs else None,
+            "lamda": self.lmbda[s]
+        }
+        return output

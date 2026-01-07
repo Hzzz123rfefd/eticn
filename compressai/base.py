@@ -310,24 +310,6 @@ class ModelVariableBitRateCompressionBase(ModelCompressionBase):
     def save_pretrained(self, save_model_dir, stage = None):
         torch.save(self.state_dict(), save_model_dir + "/model.pth")
 
-
-class ModelVGVRFBase(ModelVariableBitRateCompressionBase):
-    def __init__(
-        self,
-        image_channel,
-        image_height,
-        image_weight, 
-        out_channel_m, 
-        out_channel_n, 
-        finetune_model_dir = None, 
-        device = "cuda"
-    ):
-        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
-        self.Gain = torch.nn.Parameter(
-            torch.ones(self.out_channel_m, self.levels, dtype=torch.float32),
-            requires_grad=True
-        )
-
 class ModelQVRFBase(ModelCompressionBase):
     def __init__(
         self,
@@ -493,7 +475,54 @@ class ModelCQVRBase(ModelQVRFBase):
             output["noisy_loss"] = F.mse_loss(input["noisy"], input["predict_noisy"])
             output["total_loss"] = output["total_loss"] + output["noisy_loss"]
         return output
-    
+
+class ModelVGVRFBase(ModelVariableBitRateCompressionBase):
+    def __init__(
+        self,
+        image_channel,
+        image_height,
+        image_weight, 
+        out_channel_m, 
+        out_channel_n, 
+        finetune_model_dir = None, 
+        device = "cuda"
+    ):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
+        self.Gain = torch.nn.Parameter(
+            torch.ones(self.out_channel_m, self.levels, dtype=torch.float32),
+            requires_grad=True
+        )
+
+class ModelSTanhVRFBase(ModelVariableBitRateCompressionBase):
+    def __init__(
+        self,
+        image_channel,
+        image_height,
+        image_weight, 
+        out_channel_m, 
+        out_channel_n, 
+        finetune_model_dir = None, 
+        device = "cuda"
+    ):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
+        self.betas = [1, 2, 5, 10, 20]
+        self.L = len(self.betas)
+        self.W = torch.nn.Parameter(
+            torch.ones(self.L, self.levels, dtype=torch.float32),
+            requires_grad=True
+        )
+        self.B = torch.nn.Parameter(
+            torch.ones(self.L, self.levels, dtype=torch.float32),
+            requires_grad=True
+        )
+
+    def quantize(self, y, w, b):
+        y = y.unsqueeze(-1)
+        x = self.betas[self.L - 1] * (y - b)
+        t = torch.tanh(x)
+        y_hat = torch.sum(0.5 * w * t, dim=-1)
+        return y_hat                                                                                                                                                                                                                                   
+        
 class ModelDiffusionBase(ModelBase):
     def __init__(
         self,
