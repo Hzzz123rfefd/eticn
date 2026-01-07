@@ -463,7 +463,7 @@ class VAIC(ModelCompressionBase):
             self.M, 2 * self.M, kernel_size=5, padding=2, stride=1
         )
 
-    def forward(self, inputs, s = 1, is_train = True):
+    def forward(self, inputs):
         x = inputs["image"].to(self.device)
         y = self.g_a(x)
         z = self.h_a(y)

@@ -17,8 +17,8 @@ model:
   transfomer_head: 2
   transfomer_blocks: 3
   drop_prob: 0.1
-  lamda: 0.013
-  finetune_model_dir: "./saved_model/fbr/imagenet/camvid/0.18"  
+  lamda: 0.0483
+  finetune_model_dir: "./saved_model/gric/0.18"  
   device: cuda   
 
 # trainning args
@@ -38,12 +38,12 @@ dataset_type:
 dataset:
   target_width: 512
   target_height: 512
-  train_data_path: camvid_train/train.jsonl
-  test_data_path: camvid_train/test.jsonl
-  valid_data_path: camvid_train/val.jsonl
+  train_data_path: datasets/camvid/camvid_train/train.jsonl
+  test_data_path: datasets/camvid/camvid_train/test.jsonl
+  valid_data_path: datasets/camvid/camvid_train/val.jsonl
 
 
 
 logging:
   eval_interval: 100           
-  save_dir: "./saved_model/fbr/camvid/gric"   
+  save_dir: "./saved_model/gric"   

@@ -269,7 +269,7 @@ class ModelVariableBitRateCompressionBase(ModelCompressionBase):
         bpps = [AverageMeter() for i in self.lmbda]
         ssims = [AverageMeter() for i in self.lmbda]
         with torch.no_grad():
-            for batch_id, inputs in enumerate(val_dataloader):
+            for batch_id, inputs in enumerate(tqdm(val_dataloader, desc="Validation", leave=False)):
                 b, c, h, w = inputs["image"].shape
                 for s in range(self.levels):
                     output = self.forward(inputs = inputs, s = s, is_train = False)
@@ -287,7 +287,7 @@ class ModelVariableBitRateCompressionBase(ModelCompressionBase):
 
         log_message = ""
         for index, lamda in enumerate(self.lmbda):
-            log_message = log_message + f"lamda = {lamda}, s = {index}, stage {self.stage}, PSNR = {psnrs[index].avg},  MSSSIM = {ssims[index].avg}, BPP = {bpps[index].avg}\n"
+            log_message = log_message + f"lamda = {lamda}, s = {index},  PSNR = {psnrs[index].avg},  MSSSIM = {ssims[index].avg}, BPP = {bpps[index].avg}\n"
         print(log_message)
         
         psnrs = [each.avg for each in psnrs]
@@ -310,7 +310,7 @@ class ModelVariableBitRateCompressionBase(ModelCompressionBase):
     def save_pretrained(self, save_model_dir, stage = None):
         torch.save(self.state_dict(), save_model_dir + "/model.pth")
 
-class ModelQVRFBase(ModelCompressionBase):
+class ModelQVRFBase(ModelVariableBitRateCompressionBase):
     def __init__(
         self,
         image_channel,
@@ -322,7 +322,7 @@ class ModelQVRFBase(ModelCompressionBase):
         finetune_model_dir = None, 
         device = "cuda"
     ):
-        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, None, finetune_model_dir, device)
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
         self.Gain = torch.nn.Parameter(torch.tensor(
             [1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]), requires_grad = True)
         self.stage = stage
@@ -345,46 +345,6 @@ class ModelQVRFBase(ModelCompressionBase):
             scale = self.Gain[s]
         rescale = 1.0 / scale.clone().detach()
         return scale, rescale, s
-    
-    def eval_model(self, val_dataloader):
-        psnrs = [AverageMeter() for i in self.lmbda]
-        bpps = [AverageMeter() for i in self.lmbda]
-        ssims = [AverageMeter() for i in self.lmbda]
-        with torch.no_grad():
-            for batch_id, inputs in enumerate(val_dataloader):
-                b, c, h, w = inputs["image"].shape
-                for s in range(self.levels):
-                    output = self.forward(inputs = inputs, s = s, is_train = False)
-                    
-                    bpps[s].update(
-                        sum(
-                            (torch.log(likelihoods).sum() / (-math.log(2) * b * h * w))
-                            for likelihoods in output["likelihoods"].values()
-                        )
-                    )
-                    
-                    for i in range(b):
-                        psnrs[s].update(calculate_psnr(output["reconstruction_image"][i,:,:,:].cpu() * 255, inputs["image"][i,:,:,:].cpu() * 255))
-                        ssims[s].update(calculate_ssim(output["reconstruction_image"][i,:,:,:].cpu().numpy() * 255, inputs["image"][i,:,:,:].cpu().numpy() * 255))
-
-        log_message = ""
-        for index, lamda in enumerate(self.lmbda):
-            log_message = log_message + f"lamda = {lamda}, s = {index}, stage {self.stage}, PSNR = {psnrs[index].avg},  MSSSIM = {ssims[index].avg}, BPP = {bpps[index].avg}\n"
-        print(log_message)
-        
-        psnrs = [each.avg for each in psnrs]
-        ssims = [each.avg for each in ssims]
-        bpps = [float(each.avg.cpu().numpy()) for each in bpps]
-        del psnrs[1]
-        del bpps[1]
-        del ssims[1]
-        
-        output = {
-            "PSNR": psnrs,
-            "ms-ssim": ssims, 
-            "bpp": bpps
-        }
-        return output
 
     def configure_train_set(self, save_model_dir):
         if self.stage != None:
