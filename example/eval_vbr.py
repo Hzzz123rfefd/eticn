@@ -49,3 +49,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(args)
     
+# python  example/eval_vbr.py --model_config_path config/camvid/eticn/eticn_qeevrf_stage3.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/vbr/camvid/eticn_qeevrf/stage3 --save_path result/R-D/vbr/camvid/[Ours].json

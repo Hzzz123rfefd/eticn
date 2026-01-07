@@ -451,7 +451,6 @@ class VAIC(ModelCompressionBase):
             conv(self.M * 3 // 2, self.M * 2, stride=1, kernel_size=3),
         )
 
-
         self.entropy_parameters = nn.Sequential(
             nn.Conv2d(self.M * 12 // 3, self.M * 10 // 3, 1),
             nn.ReLU(inplace=True),

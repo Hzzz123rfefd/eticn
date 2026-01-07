@@ -6,9 +6,12 @@ import argparse
 from torch.utils.data import DataLoader
 from compressai import models, datasets
 from compressai.utils import load_config
-
+from pathlib import Path
 
 def main(args):
+    save_path = Path(args.save_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+
     config = load_config(args.model_config_path)
 
     lamdas = [0.0018, 0.0067, 0.0130, 0.025, 0.0483, 0.0932]

@@ -1,5 +1,5 @@
-from compressai.model import ETICN, ETICNQVRF, ETICNCQVR, STF, VIC, VIC2, VAIC, GRIC
-from compressai.model_vbr import VIC_CQVR, VAIC_CQVR, STF_CQVR, GRIC_CQVR, STF_QVRF, VAIC_QVRF, VIC_QVRF, GRIC_QVRF, ETICN_CQVR
+from compressai.model import ETICN, STF, VIC, VIC2, VAIC, GRIC
+from compressai.model_vbr import VIC_CQVR, VAIC_CQVR, STF_CQVR, GRIC_CQVR, STF_QVRF, VAIC_QVRF, VIC_QVRF, GRIC_QVRF, ETICN_CQVR, ETICN_QVRF, ETICN_VGVRF
 from compressai.dataset import DatasetForETICN, DatasetForImageCompression
 
 
@@ -16,7 +16,7 @@ models = {
     "vic2":VIC2,
     "vaic": VAIC,
     
-    "eticnqvrf": ETICNQVRF,
+    "eticnqvrf": ETICN_QVRF,
     "stfqvrf": STF_QVRF, 
     "vicqvrf": VIC_QVRF,
     "vaicqvrf": VAIC_QVRF,
@@ -25,8 +25,10 @@ models = {
     "viccqvr": VIC_CQVR,
     "vaiccqvr": VAIC_CQVR,
     "stfcqvr": STF_CQVR,
-    "griccqvr":GRIC_CQVR, 
-    "eticncqvr": ETICN_CQVR
+    "griccqvr": GRIC_CQVR, 
+    "eticncqvr": ETICN_CQVR,
+    
+    "eticnvgvrf": ETICN_VGVRF
 }
 
 

@@ -52,6 +52,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output_dir",type=str,default = "soda_train/")
+    parser.add_argument("--output_dir",type=str,default = "datasets/soda/soda_train/")
     args = parser.parse_args()
     main(args)

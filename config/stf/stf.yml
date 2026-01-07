@@ -1,6 +1,7 @@
 # config.yml
+
 model_type:
-  eticnqvrf
+  stf
 # mdoel args
 model:        
   image_channel: 3
@@ -8,26 +9,16 @@ model:
   image_height: 512
   patch_size: 2
   embedding_dim: 40
-  window_size: 4
-  head_num: 1
-  shift_size: 0
   out_channel_m: 192
   out_channel_n: 128
-  group_num: 64
-  codebook_size: 512
-  transfomer_head: 2
-  transfomer_blocks: 3
-  drop_prob: 0.1
-  stage: 1
-  sigma: 0
-  beta: 0
-  university_pretrain_path: "camvid_64_512.npy"
+  lamda: 0.18
+  finetune_model_dir: null
   device: cuda   
 
 # trainning args
 traininng:
   batch_size: 2               
-  epochs: 1000          
+  epochs: 500          
   learning_rate: 0.0001   
   optimizer: Adam              
   weight_decay: 0.0001
@@ -37,7 +28,7 @@ traininng:
   device: cuda
 
 dataset_type:
-  eticn
+  compression
 dataset:
   target_width: 512
   target_height: 512
@@ -45,8 +36,6 @@ dataset:
   test_data_path: camvid_train/test.jsonl
   valid_data_path: camvid_train/val.jsonl
 
-
-
 logging:
-  eval_interval: 100        
-  save_dir: "./saved_model/vbr/camvid/eticnqvrf"   
+  eval_interval: 100           
+  save_dir: "./saved_model/fbr/camvid/stf"   

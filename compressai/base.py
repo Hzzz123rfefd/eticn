@@ -231,7 +231,103 @@ class ModelCompressionBase(ModelBase):
             torch.save(self.state_dict(), save_model_dir + "/model.pth")
         else:
             torch.save(self.state_dict(), save_model_dir + str(lamda) + "/model.pth")
-  
+
+class ModelVariableBitRateCompressionBase(ModelCompressionBase):
+    def __init__(
+        self,
+        image_channel,
+        image_height,
+        image_weight, 
+        out_channel_m, 
+        out_channel_n, 
+        finetune_model_dir = None, 
+        device = "cuda"
+    ):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, None, finetune_model_dir, device)
+        self.lmbda = [0.0018, 0.0035, 0.0067, 0.0130, 0.025, 0.0483, 0.0932, 0.18]
+        self.levels = len(self.lmbda) 
+
+    def test_one_epoch(self):
+        total_loss = AverageMeter()
+        # self.eval()
+        self.to(self.device)
+        with torch.no_grad():
+            for s in range(self.levels):
+                for batch_id, inputs in enumerate(self.test_dataloader):
+                    """ forward """
+                    output = self.forward(inputs, s = s, is_train = False)
+
+                    """ calculate loss """
+                    out_criterion = self.compute_loss(output)
+                    total_loss.update(out_criterion["total_loss"].item())
+
+        self.logger.info("Test Epoch: {:d}, total_loss: {:.4f}".format(self.epoch, total_loss.avg))
+        return total_loss.avg
+
+    def eval_model(self, val_dataloader):
+        psnrs = [AverageMeter() for i in self.lmbda]
+        bpps = [AverageMeter() for i in self.lmbda]
+        ssims = [AverageMeter() for i in self.lmbda]
+        with torch.no_grad():
+            for batch_id, inputs in enumerate(val_dataloader):
+                b, c, h, w = inputs["image"].shape
+                for s in range(self.levels):
+                    output = self.forward(inputs = inputs, s = s, is_train = False)
+                    
+                    bpps[s].update(
+                        sum(
+                            (torch.log(likelihoods).sum() / (-math.log(2) * b * h * w))
+                            for likelihoods in output["likelihoods"].values()
+                        )
+                    )
+                    
+                    for i in range(b):
+                        psnrs[s].update(calculate_psnr(output["reconstruction_image"][i,:,:,:].cpu() * 255, inputs["image"][i,:,:,:].cpu() * 255))
+                        ssims[s].update(calculate_ssim(output["reconstruction_image"][i,:,:,:].cpu().numpy() * 255, inputs["image"][i,:,:,:].cpu().numpy() * 255))
+
+        log_message = ""
+        for index, lamda in enumerate(self.lmbda):
+            log_message = log_message + f"lamda = {lamda}, s = {index}, stage {self.stage}, PSNR = {psnrs[index].avg},  MSSSIM = {ssims[index].avg}, BPP = {bpps[index].avg}\n"
+        print(log_message)
+        
+        psnrs = [each.avg for each in psnrs]
+        ssims = [each.avg for each in ssims]
+        bpps = [float(each.avg.cpu().numpy()) for each in bpps]
+        del psnrs[1]
+        del bpps[1]
+        del ssims[1]
+        
+        output = {
+            "PSNR": psnrs,
+            "ms-ssim": ssims, 
+            "bpp": bpps
+        }
+        return output
+
+    def load_pretrained(self, save_model_dir):
+        self.load_state_dict(torch.load(save_model_dir + "/model.pth"), strict=False)
+
+    def save_pretrained(self, save_model_dir, stage = None):
+        torch.save(self.state_dict(), save_model_dir + "/model.pth")
+
+
+class ModelVGVRFBase(ModelVariableBitRateCompressionBase):
+    def __init__(
+        self,
+        image_channel,
+        image_height,
+        image_weight, 
+        out_channel_m, 
+        out_channel_n, 
+        finetune_model_dir = None, 
+        device = "cuda"
+    ):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
+        self.Gain = torch.nn.Parameter(
+            torch.ones(self.out_channel_m, self.levels, dtype=torch.float32),
+            requires_grad=True
+        )
+
 class ModelQVRFBase(ModelCompressionBase):
     def __init__(
         self,
@@ -267,23 +363,6 @@ class ModelQVRFBase(ModelCompressionBase):
             scale = self.Gain[s]
         rescale = 1.0 / scale.clone().detach()
         return scale, rescale, s
-    
-    def test_one_epoch(self):
-        total_loss = AverageMeter()
-        # self.eval()
-        self.to(self.device)
-        with torch.no_grad():
-            for s in range(self.levels):
-                for batch_id, inputs in enumerate(self.test_dataloader):
-                    """ forward """
-                    output = self.forward(inputs, s = s, is_train = False)
-
-                    """ calculate loss """
-                    out_criterion = self.compute_loss(output)
-                    total_loss.update(out_criterion["total_loss"].item())
-
-        self.logger.info("Test Epoch: {:d}, total_loss: {:.4f}".format(self.epoch, total_loss.avg))
-        return total_loss.avg
     
     def eval_model(self, val_dataloader):
         psnrs = [AverageMeter() for i in self.lmbda]
