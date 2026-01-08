@@ -22,7 +22,7 @@ model:
   lamda: 0.0932
   sigma: 0.0001
   beta: 0.0001
-  finetune_model_dir: null
+  finetune_model_dir: "./saved_model/eticn/0.18"  
   university_pretrain_path: camvid_64_512.npy
   device: cuda   
 
@@ -51,4 +51,4 @@ dataset:
 
 logging:
   eval_interval: 100           
-  save_dir: "./saved_model/fbr/camvid/eticn"   
+  save_dir: "./saved_model/eticn"   

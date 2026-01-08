@@ -1,1 +1,6 @@
 pybind11
+transformers
+scikit-image
+opencv-python
+peft
+datasets

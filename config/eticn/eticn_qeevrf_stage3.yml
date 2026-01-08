@@ -23,14 +23,14 @@ model:
   stage: 3
   sigma: 0.0001
   beta: 0.0001
-  finetune_model_dir: "./saved_model/vbr/camvid/eticn_qeevrf/stage2"
+  finetune_model_dir: "./saved_model/eticn/eticn_qeevrf/stage2"
   university_pretrain_path: "camvid_64_512.npy"
   device: cuda   
 
 # trainning args
 traininng:
   batch_size: 2               
-  epochs: 500         
+  epochs: 100         
   learning_rate: 0.0001   
   optimizer: Adam              
   weight_decay: 0.0001
@@ -50,4 +50,4 @@ dataset:
 
 logging:
   eval_interval: 100        
-  save_dir: "./saved_model/vbr/camvid/eticn_qeevrf"   
+  save_dir: "./saved_model/eticn/eticn_qeevrf"   

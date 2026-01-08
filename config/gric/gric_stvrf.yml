@@ -1,6 +1,6 @@
 # config.yml
 model_type:
-  eticnvgvrf
+  gricstvrf
 # mdoel args
 model:        
   image_channel: 3
@@ -13,15 +13,10 @@ model:
   shift_size: 0
   out_channel_m: 192
   out_channel_n: 128
-  group_num: 64
-  codebook_size: 512
   transfomer_head: 2
   transfomer_blocks: 3
   drop_prob: 0.1
-  sigma: 0.0001
-  beta: 0.0001
-  finetune_model_dir: "./saved_model/eticn/0.18"
-  university_pretrain_path: "camvid_64_512.npy"
+  finetune_model_dir: "./saved_model/gric/0.18"
   device: cuda   
 
 # trainning args
@@ -37,7 +32,7 @@ traininng:
   device: cuda
 
 dataset_type:
-  eticn
+  compression
 dataset:
   target_width: 512
   target_height: 512
@@ -47,4 +42,4 @@ dataset:
 
 logging:
   eval_interval: 100        
-  save_dir: "./saved_model/eticn/eticn_vgvrf"   
+  save_dir: "./saved_model/gric/gric_stvrf"   
