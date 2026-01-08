@@ -3,7 +3,7 @@ from compressai.entropy_models import *
 from compressai.modules import *
 from compressai.layers import *
 from compressai.base import *
-from compressai.model import GRIC
+from compressai.model import GRIC, VAIC
 
 class VIC_CQVR(ModelCQVRBase):
     def __init__(self, image_channel, image_height, image_weight, time_dim, out_channel_m, out_channel_n, stage, device):
@@ -68,8 +68,8 @@ class VIC_CQVR(ModelCQVRBase):
         return output
 
 class VAIC_CQVR(ModelCQVRBase):
-    def __init__(self, image_channel, image_height, image_weight, time_dim, out_channel_m, out_channel_n, stage, device):
-        super().__init__(image_channel, image_height, image_weight, time_dim, out_channel_m, out_channel_n, stage, device)
+    def __init__(self, image_channel, image_height, image_weight, time_dim, out_channel_m, out_channel_n, stage, finetune_model_dir, device):
+        super().__init__(image_channel, image_height, image_weight, time_dim, out_channel_m, out_channel_n, stage, finetune_model_dir, device)
         self.N = self.out_channel_n
         self.M = self.out_channel_m
         self.g_a = nn.Sequential(
@@ -145,8 +145,8 @@ class VAIC_CQVR(ModelCQVRBase):
         return output
 
 class STF_CQVR(ModelCQVRBase):
-    def __init__(self, image_channel, image_height, image_weight, patch_size, embedding_dim, time_dim, out_channel_m, out_channel_n, stage, device):
-        super().__init__(image_channel, image_height, image_weight, time_dim, out_channel_m, out_channel_n, stage, device)
+    def __init__(self, image_channel, image_height, image_weight, patch_size, embedding_dim, time_dim, out_channel_m, out_channel_n, stage, finetune_model_dir, device):
+        super().__init__(image_channel, image_height, image_weight, time_dim, out_channel_m, out_channel_n, stage, finetune_model_dir, device)
         self.patch_size = patch_size
         self.embed_dim = embedding_dim
         self.feather_shape = [embedding_dim*8,
@@ -593,8 +593,8 @@ class ETICN_CQVR(ModelCQVRBase):
         return output
     
 class VIC_QVRF(ModelQVRFBase):
-    def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device):
-        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device)
+    def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, finetune_model_dir, device):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, finetune_model_dir, device)
         self.N = self.out_channel_n
         self.M = self.out_channel_m
         self.g_a = nn.Sequential(
@@ -660,9 +660,10 @@ class VAIC_QVRF(ModelQVRFBase):
         out_channel_m= 192, 
         out_channel_n = 192,
         stage = 1,
+        finetune_model_dir = None,
         device = "cuda"
     ):
-        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device)
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, finetune_model_dir, device)
         self.N = out_channel_n
         self.M = out_channel_m
 
@@ -743,8 +744,8 @@ class VAIC_QVRF(ModelQVRFBase):
         return output
 
 class STF_QVRF(ModelQVRFBase):
-    def __init__(self, image_channel, image_height, image_weight, patch_size, embedding_dim, out_channel_m, out_channel_n, stage, device):
-        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, device)
+    def __init__(self, image_channel, image_height, image_weight, patch_size, embedding_dim, out_channel_m, out_channel_n, stage, finetune_model_dir,  device):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, stage, finetune_model_dir, device)
         self.patch_size = patch_size
         self.embed_dim = embedding_dim
         self.feather_shape = [embedding_dim*8,
@@ -1499,6 +1500,94 @@ class GRIC_VGVRF(ModelVGVRFBase):
         }
         return output
     
+class VAIC_VGVRF(ModelVGVRFBase):
+    def __init__(
+        self,
+        image_channel, 
+        image_height, 
+        image_weight, 
+        out_channel_m, 
+        out_channel_n, 
+        finetune_model_dir = "None", 
+        device = "cuda"
+    ):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
+        self.N = out_channel_n
+        self.M = out_channel_m
+
+        self.g_a = nn.Sequential(
+            conv(3, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.M, kernel_size=5, stride=2),
+        )
+
+        self.g_s = nn.Sequential(
+            deconv(self.M, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, 3, kernel_size=5, stride=2),
+        )
+
+        self.h_a = nn.Sequential(
+            conv(self.M, self.N, stride=1, kernel_size=3),
+            nn.ReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+        )
+
+        self.h_s = nn.Sequential(
+            deconv(self.N, self.M, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            deconv(self.M, self.M * 3 // 2, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            conv(self.M * 3 // 2, self.M * 2, stride=1, kernel_size=3),
+        )
+
+        self.entropy_parameters = nn.Sequential(
+            nn.Conv2d(self.M * 12 // 3, self.M * 10 // 3, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(self.M * 10 // 3, self.M * 8 // 3, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(self.M * 8 // 3, self.M * 6 // 3, 1),
+        )
+
+        self.context_prediction = MaskedConv2d(
+            self.M, 2 * self.M, kernel_size=5, padding=2, stride=1
+        )
+    
+    def forward(self, inputs, s = 1, is_train = True):
+        scale, rescale, scale2, rescale2 = self.get_gain(s, is_train)
+        x = inputs["image"].to(self.device)
+        y = self.g_a(x)
+        y_bar = y * scale
+        z = self.h_a(y_bar)
+        z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        params = self.h_s(z_hat)
+        y_hat = self.gaussian_conditional.quantize(y_bar, "noise" if self.training else "dequantize")
+        ctx_params = self.context_prediction(y_hat)
+        gaussian_params = self.entropy_parameters(
+            torch.cat((params, ctx_params), dim=1)
+        )
+        scales_hat, means_hat = gaussian_params.chunk(2, 1)
+        _, y_likelihoods = self.gaussian_conditional(y_hat  - means_hat , scales_hat)
+        x_hat = self.g_s(y_hat * rescale)
+        x_hat = torch.clamp(x_hat, 0, 1)
+        output = {
+                "image":inputs["image"].to(self.device),
+                "reconstruction_image":x_hat,
+                "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+                "lamda": self.lmbda[s]
+            }
+        return output
+    
 class ETICN_STVRF(ModelSTanhVRFBase):
     def __init__(
         self,
@@ -1704,8 +1793,8 @@ class GRIC_STVRF(ModelSTanhVRFBase, GRIC):
         finetune_model_dir = None, 
         device = "cuda"
     ):
-        ModelSTanhVRFBase.__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
-        GRIC().__init__(image_channel, image_height, image_weight, patch_size, embedding_dim, window_size, shift_size, out_channel_m, out_channel_n, transfomer_head, transfomer_blocks, drop_prob)
+        ModelSTanhVRFBase.__init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
+        GRIC().__init__(self, image_channel, image_height, image_weight, patch_size, embedding_dim, window_size, head_num, shift_size, out_channel_m, out_channel_n, transfomer_head, transfomer_blocks, drop_prob)
         
     def forward(self, inputs, s = 1, is_train = True):
         image = inputs["image"].to(self.device)
@@ -1748,4 +1837,99 @@ class GRIC_STVRF(ModelSTanhVRFBase, GRIC):
             "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
             "lamda": self.lmbda[s]
         }
+        return output
+    
+class VAIC_STVRF(ModelSTanhVRFBase):
+    def __init__(
+        self,
+        image_channel, 
+        image_height, 
+        image_weight, 
+        out_channel_m, 
+        out_channel_n, 
+        finetune_model_dir = "None", 
+        device = "cuda"
+    ):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
+        self.N = out_channel_n
+        self.M = out_channel_m
+
+        self.g_a = nn.Sequential(
+            conv(3, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.M, kernel_size=5, stride=2),
+        )
+
+        self.g_s = nn.Sequential(
+            deconv(self.M, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, 3, kernel_size=5, stride=2),
+        )
+
+        self.h_a = nn.Sequential(
+            conv(self.M, self.N, stride=1, kernel_size=3),
+            nn.ReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+        )
+
+        self.h_s = nn.Sequential(
+            deconv(self.N, self.M, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            deconv(self.M, self.M * 3 // 2, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            conv(self.M * 3 // 2, self.M * 2, stride=1, kernel_size=3),
+        )
+
+        self.entropy_parameters = nn.Sequential(
+            nn.Conv2d(self.M * 12 // 3, self.M * 10 // 3, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(self.M * 10 // 3, self.M * 8 // 3, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(self.M * 8 // 3, self.M * 6 // 3, 1),
+        )
+
+        self.context_prediction = MaskedConv2d(
+            self.M, 2 * self.M, kernel_size=5, padding=2, stride=1
+        )
+    
+    def forward(self, inputs, s = 1, is_train = True):
+        if is_train == True:
+            s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+            w = self.W[:, s]
+            b = self.B[:, s]
+        else:
+            w = self.W[:, s]
+            b = self.B[:, s]
+            
+        x = inputs["image"].to(self.device)
+        y = self.g_a(x)
+        z = self.h_a(y)
+        z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        params = self.h_s(z_hat)
+        y_hat = self.quantize(y, w, b)
+        
+        ctx_params = self.context_prediction(y_hat)
+        gaussian_params = self.entropy_parameters(
+            torch.cat((params, ctx_params), dim=1)
+        )
+        scales_hat, means_hat = gaussian_params.chunk(2, 1)
+        _, y_likelihoods = self.gaussian_conditional(y  - means_hat , scales_hat)
+        x_hat = self.g_s(y_hat)
+        x_hat = torch.clamp(x_hat, 0, 1)
+        output = {
+                "image":inputs["image"].to(self.device),
+                "reconstruction_image":x_hat,
+                "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+                "lamda": self.lmbda[s]
+            }
         return output

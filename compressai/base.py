@@ -452,6 +452,24 @@ class ModelVGVRFBase(ModelVariableBitRateCompressionBase):
             torch.ones(self.out_channel_m, self.levels, dtype=torch.float32),
             requires_grad=True
         )
+        self.Gain2 = torch.nn.Parameter(
+            torch.ones(self.out_channel_n, self.levels, dtype=torch.float32),
+            requires_grad=True
+        )
+    
+    def get_gain(self, s, is_train):
+        if is_train == True:
+            s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+            if s != 0:
+                scale = torch.max(self.Gain[:, s], torch.tensor(1e-4)) + 1e-9
+            else:
+                s = 0
+                scale = self.Gain[:, s].detach().clone()
+        else:
+            scale = self.Gain[:, s]
+        scale = scale.unsqueeze(0).unsqueeze(2).unsqueeze(3)
+        rescale = 1.0 / scale.clone().detach()
+        return scale, rescale, scale2, rescale2
 
 class ModelSTanhVRFBase(ModelVariableBitRateCompressionBase):
     def __init__(

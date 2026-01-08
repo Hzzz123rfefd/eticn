@@ -410,7 +410,7 @@ class VIC2(ModelCompressionBase):
         return output
 
 class VAIC(ModelCompressionBase):
-    def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device):
+    def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda = None, finetune_model_dir = None, device = "cuda"):
         super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
         self.N = out_channel_n
         self.M = out_channel_m
