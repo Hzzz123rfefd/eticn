@@ -1285,17 +1285,7 @@ class ETICN_VGVRF(ModelVGVRFBase):
 
     def forward(self, inputs, s = 1, is_train = True):
         image = inputs["image"].to(self.device)
-        if is_train == True:
-            s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
-            if s != 0:
-                scale = torch.max(self.Gain[:, s], torch.tensor(1e-4)) + 1e-9
-            else:
-                s = 0
-                scale = self.Gain[:, s].detach().clone()
-        else:
-            scale = self.Gain[:, s]
-        scale = scale.unsqueeze(0).unsqueeze(2).unsqueeze(3)
-        rescale = 1.0 / scale.clone().detach()
+        scale, rescale, s = self.get_gain(s, is_train)
         """ get latent vector """
         y, mid_feather = self.image_transform_encoder(image)
         
@@ -1325,10 +1315,10 @@ class ETICN_VGVRF(ModelVGVRFBase):
 
         """ parameters estimation"""
         gaussian_params1 = self.parm1(
-            torch.concat((local_ctx, global_ctx,side_ctx),dim=1)
+            torch.concat((local_ctx, global_ctx, side_ctx),dim=1)
         )
         gaussian_params2 = self.parm2(
-            torch.concat((local_ctx, universal_ctx,side_ctx),dim=1)
+            torch.concat((local_ctx, universal_ctx, side_ctx),dim=1)
         )
         scales_hat1, means_hat1 = gaussian_params1.chunk(2, 1)
         scales_hat2, means_hat2 = gaussian_params2.chunk(2, 1)
@@ -1453,17 +1443,7 @@ class GRIC_VGVRF(ModelVGVRFBase):
 
     def forward(self, inputs, s = 1, is_train = True):
         image = inputs["image"].to(self.device)
-        if is_train == True:
-            s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
-            if s != 0:
-                scale = torch.max(self.Gain[:, s], torch.tensor(1e-4)) + 1e-9
-            else:
-                s = 0
-                scale = self.Gain[:, s].detach().clone()
-        else:
-            scale = self.Gain[:, s]
-        scale = scale.unsqueeze(0).unsqueeze(2).unsqueeze(3)
-        rescale = 1.0 / scale.clone().detach()
+        scale, rescale, s = self.get_gain(s, is_train)
         
         """ get latent vector """
         y, mid_feather = self.image_transform_encoder(image)
@@ -1499,7 +1479,63 @@ class GRIC_VGVRF(ModelVGVRFBase):
             "lamda": self.lmbda[s]
         }
         return output
+
+class STF_VGVRF(ModelVGVRFBase):
+    def __init__(self, image_channel, image_height, image_weight, patch_size, embedding_dim, out_channel_m, out_channel_n, finetune_model_dir,  device):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
+        self.patch_size = patch_size
+        self.embed_dim = embedding_dim
+        self.feather_shape = [embedding_dim*8,
+                                            (int)(self.image_shape[1]/patch_size/8),
+                                            (int)(self.image_shape[2]/patch_size/8)]
+        self.image_transform_encoder = Encoder(image_shape = self.image_shape,
+                                                                            patch_size = patch_size,
+                                                                            embed_dim = embedding_dim,
+                                                                            window_size = 4,
+                                                                            head_num = 1,
+                                                                            shift_size = 0,
+                                                                            out_channel_m= out_channel_m
+                                                            )
+        self.image_transform_decoder = Decoder(image_shape = self.image_shape,
+                                                                            patch_size = patch_size,
+                                                                            embed_dim = embedding_dim,
+                                                                            window_size = 4,
+                                                                            head_num = 1,
+                                                                            shift_size = 0,
+                                                                            out_channel_m= out_channel_m
+                                                            )
+        self.hyperpriori_encoder = HyperprioriEncoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
+                                                                                    out_channel_m = out_channel_m,
+                                                                                    out_channel_n = out_channel_n)
+        self.hyperpriori_decoder = HyperprioriDecoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
+                                                                                    out_channel_m = out_channel_m,
+                                                                                    out_channel_n = out_channel_n)
     
+    def forward(self, inputs, s = 1, is_train = True):
+        scale, rescale, s = self.get_gain(s, is_train)
+        image = inputs["image"].to(self.device)
+        """ forward transformation """
+        y, mid_feather = self.image_transform_encoder(image)
+        y_bar = y * scale
+        """ super prior forward transformation """
+        z = self.hyperpriori_encoder(y_bar)
+        """ quantization and likelihood estimation of z"""
+        z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        """ lather feature variance"""
+        scales_hat = self.hyperpriori_decoder(z_hat)
+        """ quantization and likelihood estimation of y"""
+        y_hat = self.gaussian_conditional.quantize(y_bar, "noise" if self.training else "dequantize")
+        _, y_likelihoods = self.gaussian_conditional(y_bar, scales_hat)
+        """ reverse transformation """
+        x_hat = self.image_transform_decoder(y_hat * rescale)
+        output = {
+            "image":inputs["image"].to(self.device),
+            "reconstruction_image":x_hat,
+            "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+            "lamda":self.lmbda[s]
+        }
+        return output
+
 class VAIC_VGVRF(ModelVGVRFBase):
     def __init__(
         self,
@@ -1564,20 +1600,20 @@ class VAIC_VGVRF(ModelVGVRFBase):
         )
     
     def forward(self, inputs, s = 1, is_train = True):
-        scale, rescale, scale2, rescale2 = self.get_gain(s, is_train)
+        scale, rescale, s = self.get_gain(s, is_train)
         x = inputs["image"].to(self.device)
         y = self.g_a(x)
         y_bar = y * scale
         z = self.h_a(y_bar)
         z_hat, z_likelihoods = self.entropy_bottleneck(z)
         params = self.h_s(z_hat)
-        y_hat = self.gaussian_conditional.quantize(y_bar, "noise" if self.training else "dequantize")
+        y_hat = self.gaussian_conditional.quantize(y_bar, "noise" if self.training else "dequantize") 
         ctx_params = self.context_prediction(y_hat)
         gaussian_params = self.entropy_parameters(
             torch.cat((params, ctx_params), dim=1)
         )
         scales_hat, means_hat = gaussian_params.chunk(2, 1)
-        _, y_likelihoods = self.gaussian_conditional(y_hat  - means_hat , scales_hat)
+        _, y_likelihoods = self.gaussian_conditional(y_bar,  means_hat , scales_hat)
         x_hat = self.g_s(y_hat * rescale)
         x_hat = torch.clamp(x_hat, 0, 1)
         output = {
@@ -1725,7 +1761,7 @@ class ETICN_STVRF(ModelSTanhVRFBase):
         """ detect traffic element"""
         logits,mask = self.tedm(image,mid_feather)
         
-        y_hat = self.quantize(y, w, b)
+        y_hat = self.Stanh(y, w, b)
 
         """ get side message """
         z = self.hyperpriori_encoder(y_hat)
@@ -1809,7 +1845,7 @@ class GRIC_STVRF(ModelSTanhVRFBase, GRIC):
         """ get latent vector """
         y, mid_feather = self.image_transform_encoder(image)
 
-        y_hat = self.quantize(y, w, b)
+        y_hat = self.Stanh(y, w, b)
         
         """ get side message """
         z = self.hyperpriori_encoder(y_hat)
@@ -1903,27 +1939,20 @@ class VAIC_STVRF(ModelSTanhVRFBase):
         )
     
     def forward(self, inputs, s = 1, is_train = True):
-        if is_train == True:
-            s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
-            w = self.W[:, s]
-            b = self.B[:, s]
-        else:
-            w = self.W[:, s]
-            b = self.B[:, s]
-            
+        w, b, w2, b2, s = self.get_params(s, is_train)
         x = inputs["image"].to(self.device)
         y = self.g_a(x)
         z = self.h_a(y)
         z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        y_hat = self.Stanh(y, w, b)
+        z_hat = self.Stanh(z, w2, b2)
         params = self.h_s(z_hat)
-        y_hat = self.quantize(y, w, b)
-        
         ctx_params = self.context_prediction(y_hat)
         gaussian_params = self.entropy_parameters(
             torch.cat((params, ctx_params), dim=1)
         )
         scales_hat, means_hat = gaussian_params.chunk(2, 1)
-        _, y_likelihoods = self.gaussian_conditional(y  - means_hat , scales_hat)
+        _, y_likelihoods = self.gaussian_conditional(y_hat , means_hat , scales_hat)
         x_hat = self.g_s(y_hat)
         x_hat = torch.clamp(x_hat, 0, 1)
         output = {

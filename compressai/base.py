@@ -269,7 +269,7 @@ class ModelVariableBitRateCompressionBase(ModelCompressionBase):
         bpps = [AverageMeter() for i in self.lmbda]
         ssims = [AverageMeter() for i in self.lmbda]
         with torch.no_grad():
-            for batch_id, inputs in enumerate(tqdm(val_dataloader, desc="Validation", leave=False)):
+            for batch_id, inputs in enumerate(tqdm(val_dataloader, desc="Process:", leave=False)):
                 b, c, h, w = inputs["image"].shape
                 for s in range(self.levels):
                     output = self.forward(inputs = inputs, s = s, is_train = False)
@@ -448,14 +448,12 @@ class ModelVGVRFBase(ModelVariableBitRateCompressionBase):
         device = "cuda"
     ):
         super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
-        self.Gain = torch.nn.Parameter(
-            torch.ones(self.out_channel_m, self.levels, dtype=torch.float32),
-            requires_grad=True
-        )
-        self.Gain2 = torch.nn.Parameter(
-            torch.ones(self.out_channel_n, self.levels, dtype=torch.float32),
-            requires_grad=True
-        )
+        # self.Gain = torch.nn.Parameter(
+        #     torch.ones(self.out_channel_m, self.levels, dtype=torch.float32),
+        #     requires_grad=True
+        # )
+        self.Gain = torch.nn.Parameter(torch.tensor(
+             [[1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]] * self.out_channel_m, dtype=torch.float32), requires_grad=True)
     
     def get_gain(self, s, is_train):
         if is_train == True:
@@ -469,7 +467,7 @@ class ModelVGVRFBase(ModelVariableBitRateCompressionBase):
             scale = self.Gain[:, s]
         scale = scale.unsqueeze(0).unsqueeze(2).unsqueeze(3)
         rescale = 1.0 / scale.clone().detach()
-        return scale, rescale, scale2, rescale2
+        return scale, rescale, s
 
 class ModelSTanhVRFBase(ModelVariableBitRateCompressionBase):
     def __init__(
@@ -484,19 +482,48 @@ class ModelSTanhVRFBase(ModelVariableBitRateCompressionBase):
     ):
         super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
         self.betas = [1, 2, 5, 10, 20]
-        self.L = len(self.betas)
+        self.L = 10
+        # self.W = torch.nn.Parameter(torch.tensor(
+        #      [[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]] * self.L, dtype=torch.float32), requires_grad=True)
+        # self.B = torch.nn.Parameter(torch.tensor(
+        #      [[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]] * self.L, dtype=torch.float32), requires_grad=True)
+        # self.W = torch.nn.Parameter(
+        #     torch.ones(self.L, self.levels, dtype=torch.float32),
+        #     requires_grad=True
+        # )
+        # self.B = torch.nn.Parameter(
+        #     torch.ones(self.L, self.levels, dtype=torch.float32),
+        #     requires_grad=True
+        # )
+
         self.W = torch.nn.Parameter(
-            torch.ones(self.L, self.levels, dtype=torch.float32),
+            torch.empty(self.L, self.levels).uniform_(0.5, 1.5),
             requires_grad=True
         )
         self.B = torch.nn.Parameter(
-            torch.ones(self.L, self.levels, dtype=torch.float32),
+            torch.empty(self.L, self.levels).uniform_(0.5, 1.5),
             requires_grad=True
         )
-
-    def quantize(self, y, w, b):
+        self.W2 = torch.nn.Parameter(
+            torch.empty(self.L, self.levels).uniform_(0.5, 1.5),
+            requires_grad=True
+        )
+        self.B2 = torch.nn.Parameter(
+            torch.empty(self.L, self.levels).uniform_(0.5, 1.5),
+            requires_grad=True
+        )
+    def get_params(self, s, is_train):
+        if is_train == True:
+            s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+        w = self.W[:, s]
+        b = self.B[:, s]
+        w2 = self.W2[:, s]
+        b2 = self.B2[:, s]
+        return w, b, w2, b2, s
+    
+    def Stanh(self, y, w, b):
         y = y.unsqueeze(-1)
-        x = self.betas[self.L - 1] * (y - b)
+        x = self.betas[0] * (y - b)
         t = torch.tanh(x)
         y_hat = torch.sum(0.5 * w * t, dim=-1)
         return y_hat                                                                                                                                                                                                                                   

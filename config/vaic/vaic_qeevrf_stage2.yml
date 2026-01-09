@@ -37,4 +37,4 @@ dataset:
 
 logging:
   eval_interval: 100    
-  save_dir: "./saved_model/vaic_qeevrf"   
+  save_dir: "./saved_model/vaic/vaic_qeevrf"   
