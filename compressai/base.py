@@ -481,49 +481,36 @@ class ModelSTanhVRFBase(ModelVariableBitRateCompressionBase):
         device = "cuda"
     ):
         super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
-        self.betas = [1, 2, 5, 10, 20]
+        self.betas = 5
         self.L = 10
+        # self.B = nn.Parameter(torch.zeros(L - 1))
+        # self.W = nn.Parameter(torch.zeros(L - 1))
         # self.W = torch.nn.Parameter(torch.tensor(
         #      [[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]] * self.L, dtype=torch.float32), requires_grad=True)
         # self.B = torch.nn.Parameter(torch.tensor(
         #      [[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]] * self.L, dtype=torch.float32), requires_grad=True)
-        # self.W = torch.nn.Parameter(
-        #     torch.ones(self.L, self.levels, dtype=torch.float32),
-        #     requires_grad=True
-        # )
-        # self.B = torch.nn.Parameter(
-        #     torch.ones(self.L, self.levels, dtype=torch.float32),
-        #     requires_grad=True
-        # )
-
         self.W = torch.nn.Parameter(
-            torch.empty(self.L, self.levels).uniform_(0.5, 1.5),
+            torch.zeros(self.L, self.levels, dtype=torch.float32),
             requires_grad=True
         )
         self.B = torch.nn.Parameter(
-            torch.empty(self.L, self.levels).uniform_(0.5, 1.5),
+            torch.zeros(self.L, self.levels, dtype=torch.float32),
             requires_grad=True
         )
-        self.W2 = torch.nn.Parameter(
-            torch.empty(self.L, self.levels).uniform_(0.5, 1.5),
-            requires_grad=True
-        )
-        self.B2 = torch.nn.Parameter(
-            torch.empty(self.L, self.levels).uniform_(0.5, 1.5),
-            requires_grad=True
-        )
+        self.register_buffer("beta", torch.tensor(self.betas))
+
     def get_params(self, s, is_train):
         if is_train == True:
-            s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+            s = random.randint(0, self.levels - 1)  
         w = self.W[:, s]
         b = self.B[:, s]
-        w2 = self.W2[:, s]
-        b2 = self.B2[:, s]
-        return w, b, w2, b2, s
+        b = torch.cumsum(F.softplus(b), dim=0)
+        w = F.softplus(w)
+        return w, b, s
     
     def Stanh(self, y, w, b):
         y = y.unsqueeze(-1)
-        x = self.betas[0] * (y - b)
+        x = self.betas * (y - b)
         t = torch.tanh(x)
         y_hat = torch.sum(0.5 * w * t, dim=-1)
         return y_hat                                                                                                                                                                                                                                   

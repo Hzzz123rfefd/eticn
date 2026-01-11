@@ -29,7 +29,7 @@ def main(args):
         )
     
         """get data loader"""
-        dataset = datasets[config["dataset_type"]](
+        dataset = datasets["compression"](
             target_width = config["dataset"]["target_width"],
             target_height = config["dataset"]["target_height"],
             valid_data_path = args.data_path,
@@ -60,11 +60,9 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/gric.yml")
-    parser.add_argument("--data_path", type=str, default = "JPEG_train/vaild.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/fbr/imagenet/gric/")
-    parser.add_argument("--save_path", type=str, default = "result/vbr/JPEG/gric/Reference.json")
+    parser.add_argument("--model_config_path", type=str, default = "config/eticn/eticn.yml")
+    parser.add_argument("--data_path", type=str, default = "datasets/srti/srti_train/val.jsonl")
+    parser.add_argument("--model_path", type=str, default = "saved_model/eticn/")
+    parser.add_argument("--save_path", type=str, default = "result/R-D/fbr/srti/[Ours].json")
     args = parser.parse_args()
     main(args)
-    
-# python example/eval.py --model_config_path config/camvid/eticn.yml --data_path camvid_train/vaild.jsonl --model_path saved_model/fbr/camvid/eticn/ --save_path result/vbr/JPEG/gric/Reference.json

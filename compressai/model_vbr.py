@@ -1939,20 +1939,20 @@ class VAIC_STVRF(ModelSTanhVRFBase):
         )
     
     def forward(self, inputs, s = 1, is_train = True):
-        w, b, w2, b2, s = self.get_params(s, is_train)
+        w, b, s = self.get_params(s, is_train)
         x = inputs["image"].to(self.device)
         y = self.g_a(x)
         z = self.h_a(y)
         z_hat, z_likelihoods = self.entropy_bottleneck(z)
         y_hat = self.Stanh(y, w, b)
-        z_hat = self.Stanh(z, w2, b2)
+        # z_hat = self.Stanh(z, w2, b2)
         params = self.h_s(z_hat)
         ctx_params = self.context_prediction(y_hat)
         gaussian_params = self.entropy_parameters(
             torch.cat((params, ctx_params), dim=1)
         )
         scales_hat, means_hat = gaussian_params.chunk(2, 1)
-        _, y_likelihoods = self.gaussian_conditional(y_hat , means_hat , scales_hat)
+        _, y_likelihoods = self.gaussian_conditional(y, means_hat , scales_hat)
         x_hat = self.g_s(y_hat)
         x_hat = torch.clamp(x_hat, 0, 1)
         output = {
