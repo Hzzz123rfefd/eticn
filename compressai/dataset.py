@@ -59,10 +59,10 @@ class DatasetForETICN(DatasetBase):
         output["label"] = label
         return output
 
-    def read_image(self, image_path):
-        image = cv2.imread(image_path)
-        h, w, c = image.shape
-        resized_image = image[(int)((h/2) - (self.target_height/2)):(int)((h/2) + (self.target_height/2)),(int)((w/2) - (self.target_width/2)):(int)((w/2) + (self.target_width/2)),:]
-        if len(resized_image.shape) == 2:  
-            resized_image = np.expand_dims(image, axis=0)
-        return resized_image
+    # def read_image(self, image_path):
+    #     image = cv2.imread(image_path)
+    #     h, w, c = image.shape
+    #     resized_image = image[(int)((h/2) - (self.target_height/2)):(int)((h/2) + (self.target_height/2)),(int)((w/2) - (self.target_width/2)):(int)((w/2) + (self.target_width/2)),:]
+    #     if len(resized_image.shape) == 2:  
+    #         resized_image = np.expand_dims(image, axis=0)
+    #     return resized_image
