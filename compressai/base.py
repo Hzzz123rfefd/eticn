@@ -482,37 +482,41 @@ class ModelSTanhVRFBase(ModelVariableBitRateCompressionBase):
     ):
         super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
         self.betas = 5
-        self.L = 10
-        # self.B = nn.Parameter(torch.zeros(L - 1))
-        # self.W = nn.Parameter(torch.zeros(L - 1))
-        # self.W = torch.nn.Parameter(torch.tensor(
-        #      [[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]] * self.L, dtype=torch.float32), requires_grad=True)
-        # self.B = torch.nn.Parameter(torch.tensor(
-        #      [[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]] * self.L, dtype=torch.float32), requires_grad=True)
-        self.W = torch.nn.Parameter(
-            torch.zeros(self.L, self.levels, dtype=torch.float32),
-            requires_grad=True
-        )
+        self.L = 192
+        self.W = torch.nn.Parameter(torch.tensor(
+             [[1.0000, 1.3944, 1.9293, 2.6874, 3.7268, 5.1801, 7.1957, 10.0000]] * self.L, dtype=torch.float32), requires_grad=True)
         self.B = torch.nn.Parameter(
             torch.zeros(self.L, self.levels, dtype=torch.float32),
             requires_grad=True
         )
-        self.register_buffer("beta", torch.tensor(self.betas))
+        self.register_buffer("b", torch.tensor(self.betas))
 
     def get_params(self, s, is_train):
         if is_train == True:
-            s = random.randint(0, self.levels - 1)  
+            s = random.randint(0, self.levels - 1)  # choose random level from [0, levels-1]
+            # if s != 0:
+            #     w = torch.max(self.W[:, s], torch.tensor(1e-4)) + 1e-9
+            #     b = self.B[:, s]
+            # else:
+            #     s = 0
+            #     w = self.W[:, s].detach().clone()
+            #     b = self.B[:, s]
+        # else:
         w = self.W[:, s]
         b = self.B[:, s]
-        b = torch.cumsum(F.softplus(b), dim=0)
-        w = F.softplus(w)
+        w = w.unsqueeze(0).unsqueeze(2).unsqueeze(3)
+        b = b.unsqueeze(0).unsqueeze(2).unsqueeze(3)
         return w, b, s
     
     def Stanh(self, y, w, b):
-        y = y.unsqueeze(-1)
-        x = self.betas * (y - b)
-        t = torch.tanh(x)
-        y_hat = torch.sum(0.5 * w * t, dim=-1)
+        # y = y.unsqueeze(-1)
+        # x = self.betas * (y - b)
+        # t = torch.tanh(x)
+        # y_hat = torch.sum(0.5 * w * t, dim=-1)
+        # r_w =  1.0 / w.clone().detach()
+        half = float(0.5)
+        noise = torch.empty_like(y).uniform_(-half, half)
+        y_hat = (y * w + b + noise) / w.clone().detach()
         return y_hat                                                                                                                                                                                                                                   
         
 class ModelDiffusionBase(ModelBase):
