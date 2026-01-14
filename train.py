@@ -54,6 +54,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/eticn/eticn_stvrf.yml")
+    parser.add_argument("--model_config_path", type=str, default = "config/neta/neta_013.yml")
     args = parser.parse_args()
     main(args)

@@ -1,10 +1,9 @@
-import argparse
-import os
 import json
 import numpy as np
 from scipy import interpolate
 from scipy.integrate import quad
 import argparse
+
 
 def load_data(json_path):
     with open(json_path, 'r') as f:
@@ -45,46 +44,20 @@ def bd_psnr(bpp1, psnr1, bpp2, psnr2):
     int2, _ = quad(p2, min_int, max_int)
     return (int2 - int1) / (max_int - min_int)
 
-
 def main(args):
-    all_files = [
-        os.path.join(args.dir_path, f)
-        for f in os.listdir(args.dir_path)
-        if f.endswith(".json")
-    ]
+    bpp_ref, psnr_ref = load_data(args.base_result_path)
+    bpp_test, psnr_test = load_data(args.target_result_path)
 
-    base_result_file = os.path.join(args.dir_path, args.base_result_file)
-    bpp_ref, psnr_ref = load_data(base_result_file)
+    bdpsnr = bd_psnr(bpp_ref, psnr_ref, bpp_test, psnr_test)
+    bdrate = bd_rate(bpp_ref, psnr_ref, bpp_test, psnr_test)
 
-    results = {}   
-
-    for file_path in all_files:
-        file_name = os.path.splitext(os.path.basename(file_path))[0]
-
-        bpp_test, psnr_test = load_data(file_path)
-
-        bdpsnr = bd_psnr(bpp_ref, psnr_ref, bpp_test, psnr_test)
-        bdrate = bd_rate(bpp_ref, psnr_ref, bpp_test, psnr_test)
-
-        results[file_name] = {
-            "bdpsnr": bdpsnr,
-            "bdrate": bdrate,
-        }
-    save_path = os.path.join(args.dir_path, "BD.txt")
-
-    with open(save_path, "w", encoding="utf-8") as f:
-        for name, metrics in results.items():
-            f.write(f"{name}\n")
-            f.write(f"  BD-PSNR: {metrics['bdpsnr']:.4f}\n")
-            f.write(f"  BD-Rate: {metrics['bdrate']:.4f}\n")
-            f.write("\n")
-    print(results)
+    print(f"BD-PSNR: {bdpsnr:.3f} dB")
+    print(f"BD-Rate: {bdrate:.2f} %")    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dir_path", type = str, default = "result/R-D/fbr/camvid")
-    parser.add_argument("--base_result_file", type = str, default = "[BPG].json")
+    parser.add_argument("--base_result_path", type=str, default = "result/vbr/imagenet/gric/Reference.json")
+    parser.add_argument("--target_result_path", type=str, default = "result/vbr/imagenet/gric/Proposed-2.json")
     args = parser.parse_args()
     main(args)
-
-# python example/get_bp_psnr_rate.py --dir_path result/R-D/fbr/camvid --base_result_file [BPG].json
+    
