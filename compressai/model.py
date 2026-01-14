@@ -224,7 +224,7 @@ class ETICN(ModelCompressionBase):
                 assert self.university_pretrain_path != None, "use university pretrain,but there is no university pretrain path"
                 parameters = np.load(self.university_pretrain_path) # (g_n,c_s,g_s)
                 parameters = torch.from_numpy(parameters)
-                self.universal_context.from_pretrain(parameters,requires_grad = False)
+                self.universal_context.from_pretrain(parameters, requires_grad = False)
                 
             super().trainning(train_dataloader, test_dataloader, val_dataloader, optimizer_name, weight_decay, clip_max_norm, factor, patience, lr, total_epoch, eval_interval, save_model_dir)
 
@@ -240,6 +240,17 @@ class ETICN(ModelCompressionBase):
         output["total_loss"] =  output["total_loss"] + self.sigma * output["codebook_loss"] + self.beta * output["mask_loss"]
         # print(f"mask_loss = {output['mask_loss']}, mask_loss = {output['mask_loss']}")
         return output
+
+    def load_pretrained(self, save_model_dir):
+        full_model = torch.load(save_model_dir + "/model.pth")
+        if self.university_pretrain_path:
+            other_model = {
+                k: v for k, v in full_model.items()
+                if not k.startswith("universal_context")
+            }
+            self.load_state_dict(other_model, strict=False)
+        else:
+            self.load_state_dict(full_model)
 
 class STF(ModelCompressionBase):
     def __init__(self, image_channel, image_height, image_weight, patch_size, embedding_dim,out_channel_m, out_channel_n, lamda, finetune_model_dir, device):
