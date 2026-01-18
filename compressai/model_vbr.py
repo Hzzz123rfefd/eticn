@@ -171,29 +171,10 @@ class STF_CQVR(ModelCQVRBase):
         self.hyperpriori_encoder = HyperprioriEncoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
                                                                                     out_channel_m = out_channel_m,
                                                                                     out_channel_n = out_channel_n)
-        self.side_context = nn.Sequential(
-            deconv(out_channel_n, out_channel_m, kernel_size = 5,stride = 2),
-            nn.LeakyReLU(inplace=True),
-            deconv(out_channel_m, out_channel_m * 3 // 2,kernel_size = 5,stride = 2),
-            nn.LeakyReLU(inplace=True),
-            conv(out_channel_m * 3 // 2, out_channel_m * 2, kernel_size=3,stride = 1)
-        ).to(self.device)
         
-        self.local_context = MaskedConv2d(
-            in_channels = out_channel_m , 
-            out_channels = 2 * out_channel_m, 
-            kernel_size = 5, 
-            padding = 2, 
-            stride = 1
-        ).to(self.device)
-
-        self.parm = nn.Sequential(
-            nn.Conv2d(out_channel_m * 12 // 3,out_channel_m * 10 // 3, 1),
-            nn.LeakyReLU(inplace=True),
-            nn.Conv2d(out_channel_m * 10 // 3, out_channel_m * 8 // 3, 1),
-            nn.LeakyReLU(inplace=True),
-            nn.Conv2d(out_channel_m * 8 // 3, out_channel_m * 6 // 3, 1),
-        ).to(self.device)
+        self.hyperpriori_decoder = HyperprioriDecoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
+                                                                                    out_channel_m = out_channel_m,
+                                                                                    out_channel_n = out_channel_n)
 
     def forward(self, inputs, s = 1, is_train = True):
         image = inputs["image"].to(self.device)
@@ -205,16 +186,11 @@ class STF_CQVR(ModelCQVRBase):
             y, mid_feather = self.image_transform_encoder(image)
             """ super prior forward transformation """
             z = self.hyperpriori_encoder(y)
-            """ quantization and likelihood estimation of z"""
+            """ quantization and likelihood estimation of z """
             z_hat, z_likelihoods = self.entropy_bottleneck(z)
-            side_ctx = self.side_context(z_hat)
+            scales_hat = self.hyperpriori_decoder(z_hat)
             y_hat, noisy, predict_noisy = self.y_hat_enhance(y, scale, rescale, s, b)
-            local_ctx = self.local_context(y_hat)
-            gaussian_params = self.parm(
-                torch.concat((local_ctx, side_ctx),dim=1)
-            )
-            scales_hat, means_hat = gaussian_params.chunk(2, 1)
-            _, y_likelihoods = self.gaussian_conditional(y * scale - means_hat * scale, scales_hat * scale)
+            _, y_likelihoods = self.gaussian_conditional(y * scale , scales_hat * scale)
             x_hat = self.image_transform_decoder(y_hat)
         x_hat = torch.clamp(x_hat, 0, 1)
         output = {
