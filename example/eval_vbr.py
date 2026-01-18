@@ -14,17 +14,7 @@ def main(args):
     os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
 
     """ get model"""
-    net = models[config["model_type"]](**config["
-    Hi！
-    2396220363
-    我的账号
-    我的订单
-    规则模式
-    开机启动
-    HTTP:33210
-    SOCKS:33211
-    终端代理
-    退出登入model"]).to(config["model"]["device"])
+    net = models[config["model_type"]](**config["model"]).to(config["model"]["device"])
     net.eval()
     net.load_pretrained(
         save_model_dir = args.model_path,
