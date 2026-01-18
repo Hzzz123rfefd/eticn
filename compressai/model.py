@@ -241,19 +241,19 @@ class ETICN(ModelCompressionBase):
         # print(f"mask_loss = {output['mask_loss']}, mask_loss = {output['mask_loss']}")
         return output
 
-    def load_pretrained(self, save_model_dir, lamda):
-        if self.training:
-            full_model = torch.load(os.path.join(save_model_dir, "model.pth"))
-            if self.university_pretrain_path:
-                other_model = {
-                    k: v for k, v in full_model.items()
-                    if not k.startswith("universal_context")
-                }
-                self.load_state_dict(other_model, strict=False)
-            else:
-                self.load_state_dict(full_model)
-        else:
-            super().load_pretrained(save_model_dir, lamda)
+    # def load_pretrained(self, save_model_dir, lamda):
+    #     if self.training:
+    #         full_model = torch.load(os.path.join(save_model_dir, "model.pth"))
+    #         if self.university_pretrain_path:
+    #             other_model = {
+    #                 k: v for k, v in full_model.items()
+    #                 if not k.startswith("universal_context")
+    #             }
+    #             self.load_state_dict(other_model, strict=False)
+    #         else:
+    #             self.load_state_dict(full_model)
+    #     else:
+    #         super().load_pretrained(save_model_dir, lamda)
 
 class VAIC(ModelCompressionBase):
     def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda = None, finetune_model_dir = None, device = "cuda"):
