@@ -241,71 +241,19 @@ class ETICN(ModelCompressionBase):
         # print(f"mask_loss = {output['mask_loss']}, mask_loss = {output['mask_loss']}")
         return output
 
-    def load_pretrained(self, save_model_dir):
-        full_model = torch.load(save_model_dir + "/model.pth")
-        if self.university_pretrain_path:
-            other_model = {
-                k: v for k, v in full_model.items()
-                if not k.startswith("universal_context")
-            }
-            self.load_state_dict(other_model, strict=False)
+    def load_pretrained(self, save_model_dir, lamda):
+        if self.training:
+            full_model = torch.load(os.path.join(save_model_dir, "model.pth"))
+            if self.university_pretrain_path:
+                other_model = {
+                    k: v for k, v in full_model.items()
+                    if not k.startswith("universal_context")
+                }
+                self.load_state_dict(other_model, strict=False)
+            else:
+                self.load_state_dict(full_model)
         else:
-            self.load_state_dict(full_model)
-
-class STF(ModelCompressionBase):
-    def __init__(self, image_channel, image_height, image_weight, patch_size, embedding_dim,out_channel_m, out_channel_n, lamda, finetune_model_dir, device):
-        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
-        self.patch_size = patch_size
-        self.embed_dim = embedding_dim
-        self.feather_shape = [embedding_dim*8,
-                                            (int)(self.image_shape[1]/patch_size/8),
-                                            (int)(self.image_shape[2]/patch_size/8)]
-        self.image_transform_encoder = Encoder(image_shape = self.image_shape,
-                                                                            patch_size = patch_size,
-                                                                            embed_dim = embedding_dim,
-                                                                            window_size = 4,
-                                                                            head_num = 1,
-                                                                            shift_size = 0,
-                                                                            out_channel_m= out_channel_m
-                                                            )
-        self.image_transform_decoder = Decoder(image_shape = self.image_shape,
-                                                                            patch_size = patch_size,
-                                                                            embed_dim = embedding_dim,
-                                                                            window_size = 4,
-                                                                            head_num = 1,
-                                                                            shift_size = 0,
-                                                                            out_channel_m= out_channel_m
-                                                            )
-        self.hyperpriori_encoder = HyperprioriEncoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
-                                                                                    out_channel_m = out_channel_m,
-                                                                                    out_channel_n = out_channel_n)
-        self.hyperpriori_decoder = HyperprioriDecoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
-                                                                                    out_channel_m = out_channel_m,
-                                                                                    out_channel_n = out_channel_n)
-        self.entropy_bottleneck = EntropyBottleneck(out_channel_n)
-        self.gaussian_conditional = GaussianConditional(None)
-
-    def forward(self,inputs):
-        image = inputs["image"].to(self.device)
-        """ forward transformation """
-        y, mid_feather = self.image_transform_encoder(image)
-        """ super prior forward transformation """
-        z = self.hyperpriori_encoder(y)
-        """ quantization and likelihood estimation of z"""
-        z_hat, z_likelihoods = self.entropy_bottleneck(z)
-        """ lather feature variance"""
-        scales_hat = self.hyperpriori_decoder(z_hat)
-        """ quantization and likelihood estimation of y"""
-        y_hat, y_likelihoods = self.gaussian_conditional(y, scales_hat)
-        """ reverse transformation """
-        x_hat = self.image_transform_decoder(y_hat)
-        output = {
-            "image":inputs["image"].to(self.device),
-            "reconstruction_image":x_hat,
-            "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
-            "lamda":self.lamda
-        }
-        return output
+            super().load_pretrained(save_model_dir, lamda)
 
 class VAIC(ModelCompressionBase):
     def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda = None, finetune_model_dir = None, device = "cuda"):
@@ -522,14 +470,38 @@ class GRIC(ModelCompressionBase):
         }
         return output
 
-class NetB(STF):
-    def __init__(
-        self, image_channel, image_height, image_weight, patch_size, embedding_dim,out_channel_m, out_channel_n,
-        lamda = None, 
-        finetune_model_dir = None, 
-        device = "cuda"
-    ):
-        super().__init__(image_channel, image_height, image_weight, patch_size, embedding_dim,out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
+class STF(ModelCompressionBase):
+    def __init__(self, image_channel, image_height, image_weight, patch_size, embedding_dim,out_channel_m, out_channel_n, lamda, finetune_model_dir, device):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
+        self.patch_size = patch_size
+        self.embed_dim = embedding_dim
+        self.feather_shape = [embedding_dim*8,
+                                            (int)(self.image_shape[1]/patch_size/8),
+                                            (int)(self.image_shape[2]/patch_size/8)]
+        self.image_transform_encoder = Encoder(image_shape = self.image_shape,
+                                                                            patch_size = patch_size,
+                                                                            embed_dim = embedding_dim,
+                                                                            window_size = 4,
+                                                                            head_num = 1,
+                                                                            shift_size = 0,
+                                                                            out_channel_m= out_channel_m
+                                                            )
+        self.image_transform_decoder = Decoder(image_shape = self.image_shape,
+                                                                            patch_size = patch_size,
+                                                                            embed_dim = embedding_dim,
+                                                                            window_size = 4,
+                                                                            head_num = 1,
+                                                                            shift_size = 0,
+                                                                            out_channel_m= out_channel_m
+                                                            )
+        self.hyperpriori_encoder = HyperprioriEncoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
+                                                                                    out_channel_m = out_channel_m,
+                                                                                    out_channel_n = out_channel_n)
+        self.hyperpriori_decoder = HyperprioriDecoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
+                                                                                    out_channel_m = out_channel_m,
+                                                                                    out_channel_n = out_channel_n)
+        self.entropy_bottleneck = EntropyBottleneck(out_channel_n)
+        self.gaussian_conditional = GaussianConditional(None)
         self.entropy_parameters = nn.Sequential(
             nn.Conv2d(self.out_channel_m * 12 // 4, self.out_channel_m * 10 // 3, 1),
             nn.ReLU(inplace=True),
@@ -565,7 +537,62 @@ class NetB(STF):
         }
         return output
 
-class NetA(NetB):
+class NetC(ModelCompressionBase):
+    def __init__(self, image_channel, image_height, image_weight, patch_size, embedding_dim,out_channel_m, out_channel_n, lamda, finetune_model_dir, device):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
+        self.patch_size = patch_size
+        self.embed_dim = embedding_dim
+        self.feather_shape = [embedding_dim*8,
+                                            (int)(self.image_shape[1]/patch_size/8),
+                                            (int)(self.image_shape[2]/patch_size/8)]
+        self.image_transform_encoder = Encoder(image_shape = self.image_shape,
+                                                                            patch_size = patch_size,
+                                                                            embed_dim = embedding_dim,
+                                                                            window_size = 4,
+                                                                            head_num = 1,
+                                                                            shift_size = 0,
+                                                                            out_channel_m= out_channel_m
+                                                            )
+        self.image_transform_decoder = Decoder(image_shape = self.image_shape,
+                                                                            patch_size = patch_size,
+                                                                            embed_dim = embedding_dim,
+                                                                            window_size = 4,
+                                                                            head_num = 1,
+                                                                            shift_size = 0,
+                                                                            out_channel_m= out_channel_m
+                                                            )
+        self.hyperpriori_encoder = HyperprioriEncoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
+                                                                                    out_channel_m = out_channel_m,
+                                                                                    out_channel_n = out_channel_n)
+        self.hyperpriori_decoder = HyperprioriDecoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
+                                                                                    out_channel_m = out_channel_m,
+                                                                                    out_channel_n = out_channel_n)
+        self.entropy_bottleneck = EntropyBottleneck(out_channel_n)
+        self.gaussian_conditional = GaussianConditional(None)
+
+    def forward(self,inputs):
+        image = inputs["image"].to(self.device)
+        """ forward transformation """
+        y, mid_feather = self.image_transform_encoder(image)
+        """ super prior forward transformation """
+        z = self.hyperpriori_encoder(y)
+        """ quantization and likelihood estimation of z"""
+        z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        """ lather feature variance"""
+        scales_hat = self.hyperpriori_decoder(z_hat)
+        """ quantization and likelihood estimation of y"""
+        y_hat, y_likelihoods = self.gaussian_conditional(y, scales_hat)
+        """ reverse transformation """
+        x_hat = self.image_transform_decoder(y_hat)
+        output = {
+            "image":inputs["image"].to(self.device),
+            "reconstruction_image":x_hat,
+            "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+            "lamda":self.lamda
+        }
+        return output
+
+class NetA(STF):
     def __init__(
         self, image_channel, image_height, image_weight, patch_size, embedding_dim,out_channel_m, out_channel_n,
         transfomer_head,

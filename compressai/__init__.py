@@ -1,4 +1,4 @@
-from compressai.model import ETICN, STF, VAIC, GRIC, NetB, NetA
+from compressai.model import ETICN, STF, VAIC, GRIC, NetA, NetC
 from compressai.model_vbr import VIC_CQVR, VAIC_CQVR, STF_CQVR, GRIC_CQVR, STF_QVRF, VAIC_QVRF, VIC_QVRF, GRIC_QVRF, ETICN_CQVR, ETICN_QVRF, ETICN_VGVRF, ETICN_STVRF, GRIC_VGVRF, GRIC_STVRF, VAIC_STVRF, VAIC_VGVRF, STF_VGVRF, STF_STVRF
 from compressai.dataset import DatasetForETICN, DatasetForImageCompression
 
@@ -14,7 +14,7 @@ models = {
     "stf": STF,
     "vaic": VAIC,
     "neta": NetA,
-    "netb": NetB,
+    "netc": NetC,
     
     "eticnqvrf": ETICN_QVRF,
     "stfqvrf": STF_QVRF, 

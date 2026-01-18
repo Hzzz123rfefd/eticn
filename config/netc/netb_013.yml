@@ -1,6 +1,6 @@
 # config.yml
 model_type:
-  netb
+  netc
 # mdoel args
 model:        
   image_channel: 3
@@ -10,14 +10,14 @@ model:
   embedding_dim: 40
   out_channel_m: 192
   out_channel_n: 128
-  lamda: 0.0018
-  finetune_model_dir: "./saved_model/stf/0.0018"  
+  lamda: 0.013
+  finetune_model_dir: "./saved_model/stf/0.013"  
   device: cuda   
 
 # trainning args
 traininng:
   batch_size: 2               
-  epochs: 50         
+  epochs: 50      
   learning_rate: 0.0001   
   optimizer: Adam              
   weight_decay: 0.0001
@@ -37,4 +37,4 @@ dataset:
 
 logging:
   eval_interval: 100           
-  save_dir: "./saved_model/netb"   
+  save_dir: "./saved_model/netc"   

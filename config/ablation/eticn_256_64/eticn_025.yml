@@ -28,7 +28,7 @@ model:
 # trainning args
 traininng:
   batch_size: 2               
-  epochs: 20          
+  epochs: 100        
   learning_rate: 0.0001   
   optimizer: Adam              
   weight_decay: 0.0001
@@ -50,4 +50,4 @@ dataset:
 
 logging:
   eval_interval: 100           
-  save_dir: "./saved_model/eticn_256_64"   
+  save_dir: "./saved_model/eticn_256_64/"   

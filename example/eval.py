@@ -21,7 +21,7 @@ def main(args):
     psnrs=[]
     """ get model"""
     net = models[config["model_type"]](**config["model"]).to(config["model"]["device"])
-    
+    net.eval()
     for lamda in lamdas:
         net.load_pretrained(
             save_model_dir = args.model_path,
@@ -61,8 +61,8 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_config_path", type=str, default = "config/eticn/eticn.yml")
-    parser.add_argument("--data_path", type=str, default = "datasets/srti/srti_train/val.jsonl")
+    parser.add_argument("--data_path", type=str, default = "datasets/camvid/camvid_train/val.jsonl")
     parser.add_argument("--model_path", type=str, default = "saved_model/eticn/")
-    parser.add_argument("--save_path", type=str, default = "result/R-D/fbr/srti/[Ours].json")
+    parser.add_argument("--save_path", type=str, default = "result/R-D/fbr/camvid/ETICN.json")
     args = parser.parse_args()
     main(args)

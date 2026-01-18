@@ -14,8 +14,18 @@ def main(args):
     os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
 
     """ get model"""
-    net = models[config["model_type"]](**config["model"]).to(config["model"]["device"])
-    
+    net = models[config["model_type"]](**config["
+    Hi！
+    2396220363
+    我的账号
+    我的订单
+    规则模式
+    开机启动
+    HTTP:33210
+    SOCKS:33211
+    终端代理
+    退出登入model"]).to(config["model"]["device"])
+    net.eval()
     net.load_pretrained(
         save_model_dir = args.model_path,
     )
@@ -42,10 +52,10 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/griccqvr3.yml")
-    parser.add_argument("--data_path", type=str, default = "clic_train/vaild.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/vbr/imagenet/griccqvr3/")
-    parser.add_argument("--save_path", type=str, default = "result/2-fig6/clic.json")
+    parser.add_argument("--model_config_path", type=str, default = "config/eticn/eticn_qeevrf_stage3.yml")
+    parser.add_argument("--data_path", type=str, default = "datasets/camvid/camvid_train/val.jsonl")
+    parser.add_argument("--model_path", type=str, default = "saved_model/eticn/eticn_qeevrf/stage3")
+    parser.add_argument("--save_path", type=str, default = "result/R-D/vbr/ablation/QEEVRF.json")
     args = parser.parse_args()
     main(args)
     

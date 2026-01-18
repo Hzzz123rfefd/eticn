@@ -21,7 +21,7 @@ model:
 # trainning args
 traininng:
   batch_size: 2               
-  epochs: 100          
+  epochs: 50      
   learning_rate: 0.0001   
   optimizer: Adam              
   weight_decay: 0.0001

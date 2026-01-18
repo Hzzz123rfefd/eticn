@@ -222,15 +222,15 @@ class ModelCompressionBase(ModelBase):
 
     def load_pretrained(self, save_model_dir, lamda = None):
         if lamda == None:
-            self.load_state_dict(torch.load(save_model_dir  + "/model.pth"),  strict=False)
+            self.load_state_dict(torch.load(os.path.join(save_model_dir, "model.pth")),  strict=False)
         else:
-            self.load_state_dict(torch.load(save_model_dir + str(lamda) + "/model.pth"),  strict=False)
+            self.load_state_dict(torch.load(os.path.join(save_model_dir, str(lamda), "model.pth")),  strict=False)
 
     def save_pretrained(self, save_model_dir, lamda = None):
         if lamda == None:
-            torch.save(self.state_dict(), save_model_dir + "/model.pth")
+            torch.save(self.state_dict(), os.path.join(save_model_dir, "model.pth"))
         else:
-            torch.save(self.state_dict(), save_model_dir + str(lamda) + "/model.pth")
+            torch.save(self.state_dict(), os.path.join(save_model_dir, str(lamda), "model.pth"))
 
 class ModelVariableBitRateCompressionBase(ModelCompressionBase):
     def __init__(
@@ -421,7 +421,7 @@ class ModelCQVRBase(ModelQVRFBase):
             noisy = None
             predict_noisy = None
         else:
-            y_hat, noisy = self.gaussian_conditional.quantize(y * scale, "noise" if self.training else "dequantize", return_noisy = True)
+            y_hat, noisy = self.gaussian_conditional.quantize(y * scale, "noise" if self.training else "noise", return_noisy = True)
             y_hat = y_hat * rescale
             t = torch.ones((batch)) * (self.levels - s)
             t = t.to(self.device)

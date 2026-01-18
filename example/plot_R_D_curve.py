@@ -37,7 +37,7 @@ def R_D_SSIM(bpp_lists, msssim_lists, models):
         lines_dict[model] = line
 
     plt.xlabel('bpp')
-    plt.ylabel('PSNR(dB)')
+    plt.ylabel('MS-SSIM')
     plt.grid(True)
 
     # ================== 固定前排（自动判断是否存在） ==================
@@ -46,9 +46,16 @@ def R_D_SSIM(bpp_lists, msssim_lists, models):
 
     fixed_front = []
 
-    if baseline_name in lines_dict:
-        fixed_front.append(baseline_name)
+    # ---- Baseline：模糊匹配 ----
+    baseline_key = next(
+        (name for name in lines_dict if name.startswith("Baseline")),
+        None
+    )
 
+    if baseline_key is not None:
+        fixed_front.append(baseline_key)
+
+    # ---- Ours ----
     if proposed_name in lines_dict:
         fixed_front.append(proposed_name)
 
