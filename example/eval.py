@@ -60,9 +60,9 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/eticn/eticn.yml")
-    parser.add_argument("--data_path", type=str, default = "datasets/camvid/camvid_train/val.jsonl")
-    parser.add_argument("--model_path", type=str, default = "saved_model/eticn/")
-    parser.add_argument("--save_path", type=str, default = "result/R-D/fbr/camvid/ETICN.json")
+    parser.add_argument("--model_config_path", type=str, default = "config/stf/stf.yml")
+    parser.add_argument("--data_path", type=str, default = "datasets/bdd/bdd_train/val.jsonl")
+    parser.add_argument("--model_path", type=str, default = "saved_model/stf/")
+    parser.add_argument("--save_path", type=str, default = "result/R-D/fbr/bdd/[Zou(CVPR2022)].json")
     args = parser.parse_args()
     main(args)

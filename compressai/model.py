@@ -172,14 +172,14 @@ class ETICN(ModelCompressionBase):
             )
             scales_hat1, means_hat1 = gaussian_params1.chunk(2, 1)
             scales_hat2, means_hat2 = gaussian_params2.chunk(2, 1)
-            scales_hat = scales_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + scales_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
-            means_hat = means_hat2*(1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + means_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
+            scales_hat = scales_hat2 * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + scales_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
+            means_hat = means_hat2 * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)) + means_hat1*mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1)
 
 
             _,y_likelihoods = self.gaussian_conditional(y, scales_hat, means_hat)
             """ inverse transformation"""
             x_hat = self.image_transform_decoder(y_hat)
-            x_hat = torch.clamp(x_hat,0,1)
+            x_hat = torch.clamp(x_hat, 0, 1)
 
             """ output """
             """
@@ -388,10 +388,10 @@ class GRIC(ModelCompressionBase):
             out_channel_m= out_channel_m
         ).to(self.device)
 
-        self.tedm = TEDM(
-            in_c = self.image_shape[0], 
-            embed_dim = embedding_dim
-        ).to(self.device)
+        # self.tedm = TEDM(
+        #     in_c = self.image_shape[0], 
+        #     embed_dim = embedding_dim
+        # ).to(self.device)
 
         self.hyperpriori_encoder = HyperprioriEncoder(
             feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
@@ -399,16 +399,19 @@ class GRIC(ModelCompressionBase):
             out_channel_n = out_channel_n
         ).to(self.device)
 
-        self.side_context = nn.Sequential(
-            deconv(out_channel_n, out_channel_m, kernel_size = 5,stride = 2),
-            nn.LeakyReLU(inplace=True),
-            deconv(out_channel_m, out_channel_m * 3 // 2,kernel_size = 5,stride = 2),
-            nn.LeakyReLU(inplace=True),
-            conv(out_channel_m * 3 // 2, out_channel_m * 2, kernel_size=3,stride = 1)
-        ).to(self.device)
+        # self.side_context = nn.Sequential(
+        #     deconv(out_channel_n, out_channel_m, kernel_size = 5,stride = 2),
+        #     nn.LeakyReLU(inplace=True),
+        #     deconv(out_channel_m, out_channel_m * 3 // 2,kernel_size = 5,stride = 2),
+        #     nn.LeakyReLU(inplace=True),
+        #     conv(out_channel_m * 3 // 2, out_channel_m * 2, kernel_size=3,stride = 1)
+        # ).to(self.device)
+        self.hyperpriori_decoder = HyperprioriDecoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
+                                                                                    out_channel_m = out_channel_m,
+                                                                                    out_channel_n = out_channel_n)
 
 
-        self.local_context = MaskedConv2d(
+        self.context_prediction = MaskedConv2d(
             in_channels = out_channel_m , 
             out_channels = 2 * out_channel_m, 
             kernel_size = 5, 
@@ -424,8 +427,15 @@ class GRIC(ModelCompressionBase):
             drop_prob = drop_prob
         ).to(self.device)
         
+        # self.parm1 = nn.Sequential(
+        #     nn.Conv2d(out_channel_m * 15 // 3,out_channel_m * 10 // 3, 1),
+        #     nn.LeakyReLU(inplace=True),
+        #     nn.Conv2d(out_channel_m * 10 // 3, out_channel_m * 8 // 3, 1),
+        #     nn.LeakyReLU(inplace=True),
+        #     nn.Conv2d(out_channel_m * 8 // 3, out_channel_m * 6 // 3, 1),
+        # ).to(self.device)
         self.parm1 = nn.Sequential(
-            nn.Conv2d(out_channel_m * 15 // 3,out_channel_m * 10 // 3, 1),
+            nn.Conv2d(out_channel_m * 12 // 3,out_channel_m * 10 // 3, 1),
             nn.LeakyReLU(inplace=True),
             nn.Conv2d(out_channel_m * 10 // 3, out_channel_m * 8 // 3, 1),
             nn.LeakyReLU(inplace=True),
@@ -435,32 +445,33 @@ class GRIC(ModelCompressionBase):
     def forward(self,inputs):
         image = inputs["image"].to(self.device)
         """ get latent vector """
-        y, mid_feather = self.image_transform_encoder(image)
+        y, _ = self.image_transform_encoder(image)
 
         """ get side message """
         z = self.hyperpriori_encoder(y)
         z_hat, z_likelihoods = self.entropy_bottleneck(z)
-        side_ctx = self.side_context(z_hat)
+        # side_ctx = self.side_context(z_hat)
+        side_ctx = self.hyperpriori_decoder(z_hat)
 
         y_hat = self.gaussian_conditional.quantize(
             y, "noise" if self.training else "dequantize"
         )
 
         """ get local message """
-        local_ctx = self.local_context(y_hat)
+        local_ctx = self.context_prediction(y_hat)
 
         """ get global message """
         global_ctx = self.global_context(y_hat,local_ctx)
 
         """ parameters estimation"""
         gaussian_params1 = self.parm1(
-            torch.concat((local_ctx,global_ctx,side_ctx),dim=1)
+            torch.concat((local_ctx, global_ctx, side_ctx),dim=1)
         )
         scales_hat, means_hat = gaussian_params1.chunk(2, 1)
         _,y_likelihoods = self.gaussian_conditional(y, scales_hat, means_hat)
         """ inverse transformation"""
         x_hat = self.image_transform_decoder(y_hat)
-        x_hat = torch.clamp(x_hat,0,1)
+        x_hat = torch.clamp(x_hat, 0, 1)
 
         output = {
             "image":inputs["image"].to(self.device),
@@ -516,7 +527,7 @@ class STF(ModelCompressionBase):
         
     def forward(self,inputs):
         image = inputs["image"].to(self.device)
-        y, _ = self.image_transform_encoder(image)
+        y,  _ = self.image_transform_encoder(image)
         z = self.hyperpriori_encoder(y)
         z_hat, z_likelihoods = self.entropy_bottleneck(z)
         params = self.hyperpriori_decoder(z_hat)
@@ -526,9 +537,10 @@ class STF(ModelCompressionBase):
             torch.cat((params, ctx_params), dim=1)
         )
         scales_hat, means_hat = gaussian_params.chunk(2, 1)
-        _, y_likelihoods = self.gaussian_conditional(y  - means_hat , scales_hat)
+        _, y_likelihoods = self.gaussian_conditional(y , scales_hat, means_hat)
         """ reverse transformation """
         x_hat = self.image_transform_decoder(y_hat)
+        x_hat = torch.clamp(x_hat, 0, 1)
         output = {
             "image":inputs["image"].to(self.device),
             "reconstruction_image":x_hat,

@@ -27,8 +27,8 @@ class DatasetForImageCompression(DatasetBase):
     def read_image(self, image_path):
         image = cv2.imread(image_path)
         # h, w, c = image.shape
-        resized_image = cv2.resize(image, (self.target_width, self.target_height))
         # resized_image = image[(int)((h/2) - (self.target_height/2)):(int)((h/2) + (self.target_height/2)),(int)((w/2) - (self.target_width/2)):(int)((w/2) + (self.target_width/2)),:]
+        resized_image = cv2.resize(image, (self.target_width, self.target_height))
         if len(resized_image.shape) == 2:  
             resized_image = np.expand_dims(image, axis=0)
         return resized_image

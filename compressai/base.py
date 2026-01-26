@@ -195,7 +195,7 @@ class ModelCompressionBase(ModelBase):
         bpp = AverageMeter()
         ssim = AverageMeter()
         with torch.no_grad():
-            for batch_id,inputs in enumerate(val_dataloader):
+            for batch_id, inputs in enumerate(val_dataloader):
                 b, c, h, w = inputs["image"].shape
                 output = self.forward(inputs)
                 bpp.update(

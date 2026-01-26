@@ -64,9 +64,7 @@ def R_D_SSIM(bpp_lists, msssim_lists, models):
 
     solid_models = [m for m in remaining_models if m not in dashed_models]
     dashed_models_sorted = [m for m in remaining_models if m in dashed_models]
-
     final_order = fixed_front + solid_models + dashed_models_sorted
-
     ordered_handles = [lines_dict[m] for m in final_order]
 
     plt.legend(
