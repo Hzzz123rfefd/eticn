@@ -88,13 +88,9 @@ class ETICN(ModelCompressionBase):
             out_channel_n = out_channel_n
         ).to(self.device)
 
-        self.side_context = nn.Sequential(
-            deconv(out_channel_n, out_channel_m, kernel_size = 5,stride = 2),
-            nn.LeakyReLU(inplace=True),
-            deconv(out_channel_m, out_channel_m * 3 // 2,kernel_size = 5,stride = 2),
-            nn.LeakyReLU(inplace=True),
-            conv(out_channel_m * 3 // 2, out_channel_m * 2, kernel_size=3,stride = 1)
-        ).to(self.device)
+        self.hyperpriori_decoder = HyperprioriDecoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
+                                                                                    out_channel_m = out_channel_m,
+                                                                                    out_channel_n = out_channel_n)
 
         self.universal_context = UniversalContext(
             out_channel_m = self.out_channel_m,
@@ -102,13 +98,9 @@ class ETICN(ModelCompressionBase):
             group_num = self.group_num
         ).to(self.device)
 
-        self.local_context = MaskedConv2d(
-            in_channels = out_channel_m , 
-            out_channels = 2 * out_channel_m, 
-            kernel_size = 5, 
-            padding = 2, 
-            stride = 1
-        ).to(self.device)
+        self.context_prediction = MaskedConv2d(
+            self.out_channel_m, 2 * self.out_channel_m, kernel_size=5, padding=2, stride=1
+        )
 
         self.global_context = GlobalContext(
             head = transfomer_head ,
@@ -119,7 +111,7 @@ class ETICN(ModelCompressionBase):
         ).to(self.device)
         
         self.parm1 = nn.Sequential(
-            nn.Conv2d(out_channel_m * 15 // 3,out_channel_m * 10 // 3, 1),
+            nn.Conv2d(out_channel_m * 12 // 3,out_channel_m * 10 // 3, 1),
             nn.LeakyReLU(inplace=True),
             nn.Conv2d(out_channel_m * 10 // 3, out_channel_m * 8 // 3, 1),
             nn.LeakyReLU(inplace=True),
@@ -127,7 +119,7 @@ class ETICN(ModelCompressionBase):
         ).to(self.device)
 
         self.parm2 = nn.Sequential(
-            nn.Conv2d(out_channel_m * 15 // 3,out_channel_m * 10 // 3, 1),
+            nn.Conv2d(out_channel_m * 12 // 3,out_channel_m * 10 // 3, 1),
             nn.LeakyReLU(inplace=True),
             nn.Conv2d(out_channel_m * 10 // 3, out_channel_m * 8 // 3, 1),
             nn.LeakyReLU(inplace=True),
@@ -145,17 +137,17 @@ class ETICN(ModelCompressionBase):
             """ get side message """
             z = self.hyperpriori_encoder(y)
             z_hat, z_likelihoods = self.entropy_bottleneck(z)
-            side_ctx = self.side_context(z_hat)
+            side_ctx = self.hyperpriori_decoder(z_hat)
 
             y_hat = self.gaussian_conditional.quantize(
                 y, "noise" if self.training else "dequantize"
             )
 
             """ get local message """
-            local_ctx = self.local_context(y_hat)
+            local_ctx = self.context_prediction(y_hat)
 
             """ get global message """
-            global_ctx = self.global_context(y_hat,local_ctx)
+            global_ctx = self.global_context(y_hat, local_ctx)
 
             """ get university message"""
             y_ = y * (1 - mask.unsqueeze(1).repeat(1, self.out_channel_m, 1, 1))
@@ -165,10 +157,10 @@ class ETICN(ModelCompressionBase):
 
             """ parameters estimation"""
             gaussian_params1 = self.parm1(
-                torch.concat((local_ctx,global_ctx,side_ctx),dim=1)
+                torch.concat((local_ctx, global_ctx, side_ctx),dim=1)
             )
             gaussian_params2 = self.parm2(
-                torch.concat((local_ctx,universal_ctx,side_ctx),dim=1)
+                torch.concat((local_ctx, universal_ctx, side_ctx),dim=1)
             )
             scales_hat1, means_hat1 = gaussian_params1.chunk(2, 1)
             scales_hat2, means_hat2 = gaussian_params2.chunk(2, 1)
@@ -333,6 +325,92 @@ class VAIC(ModelCompressionBase):
             }
         return output
 
+class ELIC(ModelCompressionBase):
+    def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda = None, finetune_model_dir = None, device = "cuda"):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
+        self.N = out_channel_n
+        self.M = out_channel_m
+
+        self.g_a = nn.Sequential(
+            conv(3, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N),
+            conv(self.N, self.M, kernel_size=5, stride=2),
+        )
+
+        self.g_s = nn.Sequential(
+            deconv(self.M, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, self.N, kernel_size=5, stride=2),
+            GDN(self.N, inverse=True),
+            deconv(self.N, 3, kernel_size=5, stride=2),
+        )
+        
+        self.h_a = nn.Sequential(
+            conv(self.M, self.N, stride=1, kernel_size=3),
+            nn.ReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            conv(self.N, self.N, stride=2, kernel_size=5),
+        )
+
+        self.h_s = nn.Sequential(
+            deconv(self.N, self.M, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            deconv(self.M, self.M * 3 // 2, stride=2, kernel_size=5),
+            nn.ReLU(inplace=True),
+            conv(self.M * 3 // 2, self.M * 2, stride=1, kernel_size=3),
+        )
+
+        self.entropy_parameters = nn.Sequential(
+            nn.Conv2d(self.M * 15 // 3, self.M * 10 // 3, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(self.M * 10 // 3, self.M * 8 // 3, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(self.M * 8 // 3, self.M * 6 // 3, 1),
+        )
+
+        self.context_prediction = MaskedConv2d(
+            self.M, 2 * self.M, kernel_size=5, padding=2, stride=1
+        )
+        
+        self.channel_context = ChannelContext(
+           out_channel_m =  out_channel_m, d_model = (int)(self.image_height/16) * (int)(self.image_weight/16)
+        )
+
+    def forward(self, inputs):
+        x = inputs["image"].to(self.device)
+        y = self.g_a(x)
+        z = self.h_a(y)
+        z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        params = self.h_s(z_hat)
+
+        y_hat = self.gaussian_conditional.quantize(y , "noise" if self.training else "dequantize") 
+        ctx_params = self.context_prediction(y_hat)
+        channel_ctx = self.channel_context(y_hat)
+        
+        gaussian_params = self.entropy_parameters(
+            torch.cat((params, ctx_params, channel_ctx), dim=1)
+        )
+        scales_hat, means_hat = gaussian_params.chunk(2, 1)
+        _, y_likelihoods = self.gaussian_conditional(y  - means_hat , scales_hat)
+        x_hat = self.g_s(y_hat)
+        x_hat = torch.clamp(x_hat, 0, 1)
+        output = {
+                "image":inputs["image"].to(self.device),
+                "reconstruction_image":x_hat,
+                "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+                "lamda": self.lamda
+            }
+        return output
+        
+        
+        
 class GRIC(ModelCompressionBase):
     def __init__(
         self,
@@ -387,11 +465,6 @@ class GRIC(ModelCompressionBase):
             shift_size=shift_size,                                    
             out_channel_m= out_channel_m
         ).to(self.device)
-
-        # self.tedm = TEDM(
-        #     in_c = self.image_shape[0], 
-        #     embed_dim = embedding_dim
-        # ).to(self.device)
 
         self.hyperpriori_encoder = HyperprioriEncoder(
             feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
@@ -547,7 +620,7 @@ class STF(ModelCompressionBase):
             "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
             "lamda":self.lamda
         }
-        return output
+        return output    
 
 class NetC(ModelCompressionBase):
     def __init__(self, image_channel, image_height, image_weight, patch_size, embedding_dim,out_channel_m, out_channel_n, lamda, finetune_model_dir, device):

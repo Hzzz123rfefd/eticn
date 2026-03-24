@@ -56,10 +56,10 @@ def main(args):
 
     scale, rescale, s = net.get_scale(4, False)
 
-    y = net.g_a(image)
-    z = net.h_a(y)
+    y, _ = net.image_transform_encoder(image)
+    z = net.hyperpriori_encoder(y)
     z_hat, z_likelihoods = net.entropy_bottleneck(z)
-    scales_hat = net.h_s(z_hat)
+    scales_hat = net.side_context(z_hat)
     y_hat = net.gaussian_conditional.quantize(y * scale, "dequantize" )
     y_hat = y_hat * rescale
 
@@ -72,7 +72,7 @@ def main(args):
     y = y[0, c, :, :].detach().cpu().numpy()
     y_hat = y_hat[0, c, :, :].detach().cpu().numpy()
     y_hat2 = y_hat2[0, c, :, :].detach().cpu().numpy()
-    y_hat2 = y_hat2 * 0.9 + y * 0.1
+    y_hat2 = y_hat2 * 0.5 + y * 0.5
 
     mse = np.mean((y - y_hat) ** 2)
     print("MSE1:", mse)
@@ -88,9 +88,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/viccqvr3.yml")
-    parser.add_argument("--image_path", type=str, default = "datasets/imagenet/imgs/ILSVRC2012_val_00000028.JPEG")
-    parser.add_argument("--model_path", type=str, default = "saved_model/vbr/imagenet/viccqvr3/")
+    parser.add_argument("--model_config_path", type=str, default = "config/eticn/eticn_qeevrf_stage3.yml")
+    parser.add_argument("--image_path", type=str, default = "datasets/camvid/train/0016E5_04590.png")
+    parser.add_argument("--model_path", type=str, default = "saved_model/eticn/eticn_qeevrf/stage3/")
     parser.add_argument("--save_dir", type=str, default = "result/fig3")
     args = parser.parse_args()
     main(args)

@@ -310,6 +310,32 @@ class ModelVariableBitRateCompressionBase(ModelCompressionBase):
     def save_pretrained(self, save_model_dir, stage = None):
         torch.save(self.state_dict(), save_model_dir + "/model.pth")
 
+class ModelMSDBase(ModelVariableBitRateCompressionBase):
+    def __init__(
+        self,
+        image_channel,
+        image_height,
+        image_weight, 
+        out_channel_m, 
+        out_channel_n, 
+        finetune_model_dir = None, 
+        device = "cuda"
+    ):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, finetune_model_dir, device)
+        self.lmbda = [0.0018, 0.0035, 0.0067, 0.0130, 0.025, 0.0483, 0.0932, 0.18]
+        self.channels = [24, 48, 72, 96, 120, 144, 168, 192]
+        self.levels = len(self.lmbda)   
+    
+    def get_msf(self, y, s, is_train):
+        if is_train == True:
+            s = random.randint(0, self.levels - 1)
+        channel = self.channels[s]
+        mask = torch.ones_like(y)
+        mask[:, channel:192, :, :] = 0
+        y = y * mask + (1 - mask)
+        return y, s
+        
+
 class ModelQVRFBase(ModelVariableBitRateCompressionBase):
     def __init__(
         self,

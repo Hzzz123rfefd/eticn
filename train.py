@@ -54,6 +54,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/ablation/eticn_256_64/eticn_013.yml")
+    parser.add_argument("--model_config_path", type=str, default = "config/elic/elic.yml")
     args = parser.parse_args()
     main(args)

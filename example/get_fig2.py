@@ -79,7 +79,8 @@ def main(args):
     image = torch.tensor(read_image(args.image_path), dtype=torch.float32) / 255.0
     image = image.permute(2, 0, 1).unsqueeze(0).to(net.device)
     c = 0
-    y = net.g_a(image) * 2
+    y, _ = net.image_transform_encoder(image)
+    y = y * 2
     save_image(y[0, c, :, :].detach().cpu().numpy(), os.path.join(args.save_dir, "y_hat.jpg"));
     for i in range(7):
         scale, rescale, s = net.get_scale(i, False)
@@ -94,9 +95,9 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default = "config/imagenetc/viccqvr3.yml")
-    parser.add_argument("--image_path", type=str, default = "datasets/imagenet/imgs/ILSVRC2012_val_00000028.JPEG")
-    parser.add_argument("--model_path", type=str, default = "saved_model/vbr/imagenet/viccqvr3/")
+    parser.add_argument("--model_config_path", type=str, default = "config/eticn/eticn_qeevrf_stage3.yml")
+    parser.add_argument("--image_path", type=str, default = "datasets/camvid/train/0016E5_04590.png")
+    parser.add_argument("--model_path", type=str, default = "saved_model/eticn/eticn_qeevrf/stage3/")
     parser.add_argument("--save_dir", type=str, default = "result/2-fig2")
     args = parser.parse_args()
     main(args)

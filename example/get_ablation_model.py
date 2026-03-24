@@ -1,10 +1,11 @@
+import os
+import sys
+sys.path.append(os.getcwd())
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
-from compressai import models,datasets
+from compressai import models
 from compressai.utils import load_config
 import argparse
-import os
 
 def main(args):
     for root, _, files in os.walk(args.model_config_dir):
@@ -30,6 +31,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_dir", type=str, default = "config/ablation/eticn_256_32/")
+    parser.add_argument("--model_config_dir", type=str, default = "config/ablation/eticn_1024_32/")
     args = parser.parse_args()
     main(args)

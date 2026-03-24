@@ -221,9 +221,50 @@ class HyperprioriDecoder(nn.Module):
 
     def forward(self,x):
         return F.interpolate(self.h_s(x), size=(self.feather_shape[1], self.feather_shape[2]), mode='bilinear', align_corners=False)
-    
+        
+class ChannelContext(nn.Module):
+    def __init__(self, out_channel_m, d_model, nhead = 2, num_layers = 2):
+        super().__init__()
+        self.d_model = d_model
+        
+        # 多头自注意力的 Decoder 层
+        decoder_layer = nn.TransformerDecoderLayer(
+            d_model=d_model, nhead=nhead, batch_first=True
+        )
+        self.decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
+        
+        # 输出投影回输入维度
+        self.output_proj = nn.Linear(d_model, d_model)
+
+        # 可选 Positional Encoding
+        self.pos_embedding = nn.Parameter(torch.randn(1, out_channel_m, d_model))
+        
+    def forward(self, x):
+        """
+        x: [batch, c, h, w] 输入特征
+        """
+        b, c, h, w = x.shape
+        x = x.reshape(b, c, h * w)
+        
+        # 添加位置编码
+        x = x + self.pos_embedding
+
+        # 构建 causal mask 保证自回归
+        mask = torch.triu(torch.ones(c, c), diagonal=1).bool().to(x.device)
+
+        # memory为空
+        dummy_memory = torch.zeros(x.size(0), 1, self.d_model, device=x.device)
+
+        # decoder 
+        out = self.decoder(tgt = x, memory = dummy_memory, tgt_mask = mask)
+        
+        # 投影回输入维度
+        out = self.output_proj(out)  # [batch, seq_len, d_model]
+        out = out.reshape(b, c , h, w)
+        return out
+
 class GlobalContext(nn.Module):
-    def __init__(self,head,layers,drop_prob,d_model_1,d_model_2):
+    def __init__(self, head, layers, drop_prob, d_model_1, d_model_2):
         super(GlobalContext, self).__init__()
         self.transformer_encoder = TransfomerEncoder(d_model = d_model_2, 
                                                     ffn_hidden = 2 * d_model_2, 

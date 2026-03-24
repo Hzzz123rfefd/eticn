@@ -20,7 +20,11 @@ def R_D_SSIM(bpp_lists, msssim_lists, models):
     # ================== 虚线方法定义 ==================
     dashed_models = {
         "BPG", "JEPG2000", "VVC",
-        "[BPG]", "[JEPG2000]", "[VVC]"
+        "[BPG]", "[JEPG2000]", "[VVC]", "[ETICN]"
+    }
+    # ================== 基座方法定义 ==================
+    base_models = {
+        "Baseline[Minnen(NIPS2018)]", "Baseline[Zou(CVPR2022)]", "Baseline[Yang(NIPS2024)]", "Baseline[ETICN]"
     }
 
     # ================== 绘图并保存句柄 ==================
@@ -31,6 +35,8 @@ def R_D_SSIM(bpp_lists, msssim_lists, models):
     for bpp, psnr, model in zip(bpp_lists, msssim_lists, models):
         if model in dashed_models:
             line, = plt.plot(bpp, psnr, marker='o', linestyle='--', label=model)
+        elif model in base_models:
+            line, = plt.plot(bpp, psnr, marker='*', linestyle='-', label=model)
         else:
             line, = plt.plot(bpp, psnr, marker='o', linestyle='-', label=model)
 
@@ -91,7 +97,11 @@ def R_D_PSNR(bpp_lists, psnr_lists, models):
     # ================== 虚线方法定义 ==================
     dashed_models = {
         "BPG", "JEPG2000", "VVC",
-        "[BPG]", "[JEPG2000]", "[VVC]"
+        "[BPG]", "[JEPG2000]", "[VVC]", "[ETICN]"
+    }
+    # ================== 基座方法定义 ==================
+    base_models = {
+        "Baseline[Minnen(NIPS2018)]", "Baseline[Zou(CVPR2022)]", "Baseline[Yang(NIPS2024)]", "Baseline[ETICN]"
     }
 
     # ================== 绘图并保存句柄 ==================
@@ -102,6 +112,8 @@ def R_D_PSNR(bpp_lists, psnr_lists, models):
     for bpp, psnr, model in zip(bpp_lists, psnr_lists, models):
         if model in dashed_models:
             line, = plt.plot(bpp, psnr, marker='o', linestyle='--', label=model)
+        elif model in base_models:
+            line, = plt.plot(bpp, psnr, marker='*', linestyle='-', label=model)
         else:
             line, = plt.plot(bpp, psnr, marker='o', linestyle='-', label=model)
 
