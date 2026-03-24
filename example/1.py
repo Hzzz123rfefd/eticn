@@ -8,8 +8,6 @@ from compressai.utils import *
 from compressai import models
 
 
-
-
 def main(args):
     config = load_config(args.model_config_path)
     """ get model"""

@@ -1,5 +1,6 @@
 compressai.egg-info
 build
+tmp
 __pycache__
 *.so
 version.py

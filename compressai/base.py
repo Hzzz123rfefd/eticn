@@ -334,7 +334,13 @@ class ModelMSDBase(ModelVariableBitRateCompressionBase):
         mask[:, channel:192, :, :] = 0
         y = y * mask + (1 - mask)
         return y, s
-        
+    
+    def get_y_likelihoods(self, y_likelihoods, s):
+        channel = self.channels[s]
+        mask = torch.ones_like(y_likelihoods)
+        mask[:, channel:192, :, :] = 0 
+        y_likelihoods = y_likelihoods * mask + (1 - mask)
+        return y_likelihoods
 
 class ModelQVRFBase(ModelVariableBitRateCompressionBase):
     def __init__(
