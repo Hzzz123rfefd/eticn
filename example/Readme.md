@@ -17,6 +17,7 @@ python train.py --model_config_path config/eticn/eticn_0932.yml
 - **eticn-qvrf:** ``` python train.py --model_config_path config/eticn/eticn_qvrf.yml ```
 - **eticn-vgvrf:** ``` python train.py --model_config_path config/eticn/eticn_vgvrf.yml ```
 - **eticn-stvrf:** ``` python train.py --model_config_path config/eticn/eticn_stvrf.yml ```
+- **eticn-msd:** ``` python train.py --model_config_path config/eticn/eticn_msd.yml ```
 
 ### 1.2 **gric系列模型训练**
 
@@ -39,23 +40,57 @@ python train.py --model_config_path config/gric/gric_0932.yml
 
 ### **1.3 stf系列模型训练**
 
+- **stf基座模型:** `python train.py --model_config_path config/stf/stf.yml`
+- **stf**
+
+```bash
+python train.py --model_config_path config/stf/stf_013.yml
+python train.py --model_config_path config/stf/stf_0018.yml
+python train.py --model_config_path config/stf/stf_025.yml
+python train.py --model_config_path config/stf/stf_0067.yml
+python train.py --model_config_path config/stf/stf_0483.yml
+python train.py --model_config_path config/stf/stf_0932.yml
+```
+
 - **stf-qeevrf**:``` python train.py --model_config_path config/stf/stf_qeevrf_stage2.yml & python train.py --model_config_path config/stf/stf_qeevrf_stage3.yml ```
 - **stf-qvrf**:``` python train.py --model_config_path config/stf/stf_qvrf.yml ```
 - **stf-vgvrf**: ``` python train.py --model_config_path config/stf/stf_vgvrf.yml ```
 - **stf-stvrf:** ``` python train.py --model_config_path config/stf/stf_stvrf.yml ```
+- **stf-msd:** ``` python train.py --model_config_path config/stf/stf_msd.yml ```
 
 ### **1.4 vaic系列模型训练**
 
-- vaic:
+- **vaic基座模型:** `python train.py --model_config_path config/vaic/vaic.yml`
+- **vaic**
 
 ```bash
-
+python train.py --model_config_path config/vaic/vaic_013.yml
+python train.py --model_config_path config/vaic/vaic_0018.yml
+python train.py --model_config_path config/vaic/vaic_025.yml
+python train.py --model_config_path config/vaic/vaic_0067.yml
+python train.py --model_config_path config/vaic/vaic_0483.yml
+python train.py --model_config_path config/vaic/vaic_0932.yml
 ```
-- vaic-qeevrf: ``` python train.py --model_config_path config/vaic/vaic_qeevrf_stage2.yml & python train.py --model_config_path config/vaic/vaic_qeevrf_stage3.yml ```
 
+- vaic-qeevrf: ``` python train.py --model_config_path config/vaic/vaic_qeevrf_stage2.yml & python train.py --model_config_path config/vaic/vaic_qeevrf_stage3.yml ```
 - vaic-qvrf:``` python train.py --model_config_path config/vaic/vaic_qvrf.yml ```
 - vaic-stvrf: ``` python train.py --model_config_path config/vaic/vaic_stvrf.yml ```
 - vaic-vgvrf: ``` python train.py --model_config_path config/vaic/vaic_vgvrf.yml ```
+- vaic-msd: ``` python train.py --model_config_path config/vaic/vaic_msd.yml ```
+
+### **1.5 elic系列模型训练**
+
+- **elic基座模型:** `python train.py --model_config_path config/elic/elic.yml`
+- **elic**
+
+```bash
+python train.py --model_config_path config/elic/elic_013.yml
+python train.py --model_config_path config/elic/elic_0018.yml
+python train.py --model_config_path config/elic/elic_025.yml
+python train.py --model_config_path config/elic/elic_0067.yml
+python train.py --model_config_path config/elic/elic_0483.yml
+python train.py --model_config_path config/elic/elic_0932.yml
+```
 
 
 
