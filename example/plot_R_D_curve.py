@@ -24,7 +24,8 @@ def R_D_SSIM(bpp_lists, msssim_lists, models):
     }
     # ================== 基座方法定义 ==================
     base_models = {
-        "Baseline[Minnen(NIPS2018)]", "Baseline[Zou(CVPR2022)]", "Baseline[Yang(NIPS2024)]", "Baseline[ETICN]"
+        "Baseline[Minnen(NIPS2018)]", "Baseline[Zou(CVPR2022)]", "Baseline[Yang(NIPS2024)]", "Baseline[ETICN]", "Foundation[JA-HP]",
+        "Foundation[STF]", "Foundation[ETICM]"
     }
 
     # ================== 绘图并保存句柄 ==================
@@ -47,14 +48,14 @@ def R_D_SSIM(bpp_lists, msssim_lists, models):
     plt.grid(True)
 
     # ================== 固定前排（自动判断是否存在） ==================
-    proposed_name = "[Ours]"
+    proposed_name = "[QEEVRM]"
     baseline_name = "Baseline [Qian (ICLR2022)]"
 
     fixed_front = []
 
     # ---- Baseline：模糊匹配 ----
     baseline_key = next(
-        (name for name in lines_dict if name.startswith("Baseline")),
+        (name for name in lines_dict if name.startswith("Foundation")),
         None
     )
 
@@ -101,7 +102,8 @@ def R_D_PSNR(bpp_lists, psnr_lists, models):
     }
     # ================== 基座方法定义 ==================
     base_models = {
-        "Baseline[Minnen(NIPS2018)]", "Baseline[Zou(CVPR2022)]", "Baseline[Yang(NIPS2024)]", "Baseline[ETICN]"
+        "Baseline[Minnen(NIPS2018)]", "Baseline[Zou(CVPR2022)]", "Baseline[Yang(NIPS2024)]", "Baseline[ETICN]", "Foundation[JA-HP]",
+        "Foundation[STF]", "Foundation[ETICM]"
     }
 
     # ================== 绘图并保存句柄 ==================
@@ -124,14 +126,14 @@ def R_D_PSNR(bpp_lists, psnr_lists, models):
     plt.grid(True)
 
     # ================== 固定前排（自动判断是否存在） ==================
-    proposed_name = "[Ours]"
+    proposed_name = "[QEEVRM]"
     baseline_name = "Baseline [Qian (ICLR2022)]"
 
     fixed_front = []
 
     # ---- Baseline：模糊匹配 ----
     baseline_key = next(
-        (name for name in lines_dict if name.startswith("Baseline")),
+        (name for name in lines_dict if name.startswith("Foundation")),
         None
     )
 

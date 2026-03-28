@@ -98,6 +98,7 @@ python train.py --model_config_path config/elic/elic_0932.yml
 ### 2.1 固定速率
 #### 2.1.1 camvid数据集
 * eticn: ```python example/eval.py --model_config_path config/eticn/eticn.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/ --save_path result/R-D/fbr/camvid/[Ours].json```
+* elic: ```python example/eval.py --model_config_path config/elic/elic.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/elic/ --save_path result/1.json```
 * stf：```python example/eval.py --model_config_path config/stf/stf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/stf/ --save_path result/R-D/fbr/camvid/[Zou(CVPR2022)].json ```
 * gric:```python example/eval.py --model_config_path config/gric/gric.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/gric/ --save_path result/R-D/fbr/camvid/[Yang(NIPS2024)].json ```
 * vaic: ```python example/eval.py --model_config_path config/vaic/vaic.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/vaic/ --save_path result/R-D/fbr/camvid/[Minnen(NIPS2018)].json```
@@ -147,6 +148,7 @@ bdd数据集：
 * **qvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/eticn_qvrf/stage2 --save_path result/R-D/vbr/eticn/[Tong(NIPS2023)].json```
 * **vgvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_vgvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/eticn_vgvrf/ --save_path result/R-D/vbr/eticn/[Cai(CVPR2022)].json```
 * **stvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_stvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/eticn_stvrf/ --save_path result/R-D/vbr/eticn/[Presta(TIP2025)].json```
+* **msd**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_msd.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/eticn_msd/ --save_path result/R-D/vbr/eticn/camvid/[MSD].json```
 * BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/eticn --base_result_file Baseline[ETICN].json```
 * RD结果：```python example/plot_R_D_curve.py --dir_path result/R-D/vbr/eticn/```
 
@@ -155,6 +157,7 @@ bdd数据集：
 * **qvrf**：```python example/eval_vbr.py --model_config_path config/stf/stf_qvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/stf/stf_qvrf/stage2 --save_path result/R-D/vbr/stf/[Tong(NIPS2023)].json```
 * **vgvrf**：```python example/eval_vbr.py --model_config_path config/stf/stf_vgvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/stf/stf_vgvrf/ --save_path result/R-D/vbr/stf/[Cai(CVPR2022)].json```
 * **stvrf**：```python example/eval_vbr.py --model_config_path config/stf/stf_stvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/stf/stf_stvrf/ --save_path result/R-D/vbr/stf/[Presta(TIP2025)].json```
+* **msd**：```python example/eval_vbr.py --model_config_path config/stf/stf_msd.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/stf/stf_msd/ --save_path result/R-D/vbr/stf/camvid/[MSD].json```
 * BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/stf --base_result_file Baseline[Zou(CVPR2022)].json```
 * RD曲线：```python example/plot_R_D_curve.py --dir_path result/R-D/vbr/stf/```
 
@@ -171,6 +174,7 @@ bdd数据集：
 **qvrf**：```python example/eval_vbr.py --model_config_path config/vaic/vaic_qvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/vaic/vaic_qvrf/stage2 --save_path result/R-D/vbr/vaic/camvid/[Tong(NIPS2023)].json```
 **vgvrf**：```python example/eval_vbr.py --model_config_path config/vaic/vaic_vgvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/vaic/vaic_vgvrf/ --save_path result/R-D/vbr/vaic/camvid/[Cai(CVPR2022)].json```
 **stvrf**：```python example/eval_vbr.py --model_config_path config/vaic/vaic_stvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/vaic/vaic_stvrf/ --save_path result/R-D/vbr/vaic/camvid/[Presta(TIP2025)].json```
+**msd**：```python example/eval_vbr.py --model_config_path config/vaic/vaic_msd.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/vaic/vaic_msd/ --save_path result/R-D/vbr/vaic/camvid/[MSD].json```
 * BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/vaic --base_result_file Baseline[Minnen(NIPS2018)].json```
 * RD曲线：```python example/plot_R_D_curve.py --dir_path result/R-D/vbr/vaic/```
 
@@ -182,6 +186,7 @@ bdd数据集：
 * **qvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qvrf.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_qvrf/stage2 --save_path result/R-D/vbr/soda/eticn/[Tong(NIPS2023)].json```
 * **vgvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_vgvrf.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_vgvrf/ --save_path result/R-D/vbr/soda/eticn/[Cai(CVPR2022)].json```
 * **stvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_stvrf.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_stvrf/ --save_path result/R-D/vbr/soda/eticn/[Presta(TIP2025)].json```
+* **msd**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_msd.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_msd/ --save_path result/R-D/vbr/soda/eticn/[MSD].json```
 * BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/soda/eticn --base_result_file Baseline[ETICN].json```
 * RD结果：```python example/plot_R_D_curve.py --dir_path result/R-D/vbr/soda/eticn```
 
@@ -191,6 +196,7 @@ bdd数据集：
 * **qvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qvrf.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_qvrf/stage2 --save_path result/R-D/vbr/srti/eticn/[Tong(NIPS2023)].json```
 * **vgvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_vgvrf.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_vgvrf/ --save_path result/R-D/vbr/srti/eticn/[Cai(CVPR2022)].json```
 * **stvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_stvrf.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_stvrf/ --save_path result/R-D/vbr/srti/eticn/[Presta(TIP2025)].json```
+* **msd**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_msd.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_msd/ --save_path result/R-D/vbr/srti/eticn/[MSD].json```
 * BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/srti/eticn --base_result_file Baseline[ETICN].json```
 * RD结果：```python example/plot_R_D_curve.py --dir_path result/R-D/vbr/srti/eticn/```
 

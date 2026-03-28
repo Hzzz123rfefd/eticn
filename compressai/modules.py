@@ -221,7 +221,27 @@ class HyperprioriDecoder(nn.Module):
 
     def forward(self,x):
         return F.interpolate(self.h_s(x), size=(self.feather_shape[1], self.feather_shape[2]), mode='bilinear', align_corners=False)
+
+class ChannelContext2(nn.Module):
+    def __init__(self, d_model):
+        super().__init__()
+        self.d_model = d_model
+        self.maskconv1d = MaskedConv1d(
+            self.d_model, self.d_model, kernel_size=5, padding=2, stride=1
+        )
         
+    def forward(self, x):
+        """
+        x: [batch, c, h, w] 输入特征
+        """
+        b, c, h, w = x.shape
+        x = x.reshape(b, c, h * w)
+        # x = x.permute(0, 2, 1)
+        x = self.maskconv1d(x)
+        # x = x.permute(0, 2, 1)
+        x = x.reshape(b, c , h, w)
+        return x
+
 class ChannelContext(nn.Module):
     def __init__(self, out_channel_m, d_model, nhead = 2, num_layers = 2):
         super().__init__()
@@ -290,7 +310,7 @@ class GlobalContext(nn.Module):
             mask[:,i,i+1:] = 0
         return y_hat,mask
 
-    def forward(self,y2,local_context):
+    def forward(self, y2, local_context):
         b,c,h,w = local_context.shape
         local_context = local_context.reshape(b,c,h*w).permute(0,2,1)
         pos_h = positionalencoding1d(b,h,c).repeat(1,w,1)

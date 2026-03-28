@@ -379,8 +379,11 @@ class ELIC(ModelCompressionBase):
             self.M, 2 * self.M, kernel_size=5, padding=2, stride=1
         )
         
-        self.channel_context = ChannelContext(
-           out_channel_m =  out_channel_m, d_model = (int)(self.image_height/16) * (int)(self.image_weight/16)
+        # self.channel_context = ChannelContext(
+        #    out_channel_m =  out_channel_m, d_model = (int)(self.image_height/16) * (int)(self.image_weight/16)
+        # )
+        self.channel_context = ChannelContext2(
+           d_model = out_channel_m
         )
 
     def forward(self, inputs):
