@@ -98,7 +98,7 @@ python train.py --model_config_path config/elic/elic_0932.yml
 ### 2.1 固定速率
 #### 2.1.1 camvid数据集
 * eticn: ```python example/eval.py --model_config_path config/eticn/eticn.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/ --save_path result/R-D/fbr/camvid/[Ours].json```
-* elic: ```python example/eval.py --model_config_path config/elic/elic.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/elic/ --save_path result/1.json```
+* elic: ```python example/eval.py --model_config_path config/elic/elic.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/elic/ --save_path result/R-D/fbr/soda/[ELIC].json```
 * stf：```python example/eval.py --model_config_path config/stf/stf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/stf/ --save_path result/R-D/fbr/camvid/[Zou(CVPR2022)].json ```
 * gric:```python example/eval.py --model_config_path config/gric/gric.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/gric/ --save_path result/R-D/fbr/camvid/[Yang(NIPS2024)].json ```
 * vaic: ```python example/eval.py --model_config_path config/vaic/vaic.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/vaic/ --save_path result/R-D/fbr/camvid/[Minnen(NIPS2018)].json```
@@ -110,6 +110,7 @@ python train.py --model_config_path config/elic/elic_0932.yml
 
 #### 2.1.2 soda数据集
 * **eticn**：```python example/eval.py --model_config_path config/eticn/eticn.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/ --save_path result/R-D/fbr/soda/[Ours].json```
+* elic: ```python example/eval.py --model_config_path config/elic/elic.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/elic/ --save_path result/R-D/fbr/soda/[ELIC].json```
 * **stf**：```python example/eval.py --model_config_path config/stf/stf.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/stf/ --save_path result/R-D/fbr/soda/[Zou(CVPR2022)].json ```
 * **gric**:```python example/eval.py --model_config_path config/gric/gric.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/gric/ --save_path result/R-D/fbr/soda/[Yang(NIPS2024)].json ```
 * **vaic**: ```python example/eval.py --model_config_path config/vaic/vaic.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/vaic/ --save_path result/R-D/fbr/soda/[Minnen(NIPS2018)].json```
@@ -121,6 +122,7 @@ python train.py --model_config_path config/elic/elic_0932.yml
 
 #### 2.1.3 srti数据集
 * **eticn**：```python example/eval.py --model_config_path config/eticn/eticn.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/ --save_path result/R-D/fbr/srti/[Ours].json```
+* elic: ```python example/eval.py --model_config_path config/elic/elic.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/elic/ --save_path result/R-D/fbr/srti/[ELIC].json```
 * **stf**：```python example/eval.py --model_config_path config/stf/stf.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/stf/ --save_path result/R-D/fbr/srti/[Zou(CVPR2022)].json ```
 * **gric**:```python example/eval.py --model_config_path config/gric/gric.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/gric/ --save_path result/R-D/fbr/srti/[Yang(NIPS2024)].json```
 * **vaic**: ```python example/eval.py --model_config_path config/vaic/vaic.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/vaic/ --save_path result/R-D/fbr/srti/[Minnen(NIPS2018)].json```
@@ -187,7 +189,7 @@ bdd数据集：
 * **vgvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_vgvrf.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_vgvrf/ --save_path result/R-D/vbr/soda/eticn/[Cai(CVPR2022)].json```
 * **stvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_stvrf.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_stvrf/ --save_path result/R-D/vbr/soda/eticn/[Presta(TIP2025)].json```
 * **msd**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_msd.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_msd/ --save_path result/R-D/vbr/soda/eticn/[MSD].json```
-* BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/soda/eticn --base_result_file Baseline[ETICN].json```
+* BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/soda/eticn --base_result_file Foundation[ETICM].json```
 * RD结果：```python example/plot_R_D_curve.py --dir_path result/R-D/vbr/soda/eticn```
 
 ##### 2.2.2.2 srti
@@ -197,7 +199,7 @@ bdd数据集：
 * **vgvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_vgvrf.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_vgvrf/ --save_path result/R-D/vbr/srti/eticn/[Cai(CVPR2022)].json```
 * **stvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_stvrf.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_stvrf/ --save_path result/R-D/vbr/srti/eticn/[Presta(TIP2025)].json```
 * **msd**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_msd.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_msd/ --save_path result/R-D/vbr/srti/eticn/[MSD].json```
-* BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/srti/eticn --base_result_file Baseline[ETICN].json```
+* BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/srti/eticn --base_result_file Foundation[ETICM].json```
 * RD结果：```python example/plot_R_D_curve.py --dir_path result/R-D/vbr/srti/eticn/```
 
 ### 2.3 消融实验
