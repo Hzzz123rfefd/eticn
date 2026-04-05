@@ -101,6 +101,6 @@ if __name__ == "__main__":
     parser.add_argument("--model_config_path", type=str, default = "config/eticn/eticn.yml")
     parser.add_argument("--image_path", type=str, default = "datasets/camvid/train/0016E5_04590.png")
     parser.add_argument("--model_path", type=str, default = "saved_model/eticn/0.0932/")
-    parser.add_argument("--save_dir", type=str, default = "result/2-fig22")
+    parser.add_argument("--save_dir", type=str, default = "result/fig4-3")
     args = parser.parse_args()
     main(args)

@@ -1,7 +1,6 @@
 # config.yml
-
 model_type:
-  eticncqvr
+  eticnqeevrf
 # mdoel args
 model:        
   image_channel: 3

@@ -1,7 +1,6 @@
 # config.yml
-
 model_type:
-  gric
+  mlic
 # mdoel args
 model:        
   image_channel: 3
@@ -17,14 +16,14 @@ model:
   transfomer_head: 2
   transfomer_blocks: 3
   drop_prob: 0.1
-  lamda: 0.0067
-  finetune_model_dir: "./saved_model/gric/0.18"  
+  lamda: 0.18
+  finetune_model_dir: null
   device: cuda   
 
 # trainning args
 traininng:
   batch_size: 2               
-  epochs: 100          
+  epochs: 500          
   learning_rate: 0.0001   
   optimizer: Adam              
   weight_decay: 0.0001
@@ -42,8 +41,6 @@ dataset:
   test_data_path: datasets/camvid/camvid_train/test.jsonl
   valid_data_path: datasets/camvid/camvid_train/val.jsonl
 
-
-
 logging:
   eval_interval: 100           
-  save_dir: "./saved_model/gric"   
+  save_dir: "./saved_model/mlic"   

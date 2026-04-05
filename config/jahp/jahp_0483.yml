@@ -1,7 +1,7 @@
 # config.yml
 
 model_type:
-  vaiccqvr
+  jahp
 # mdoel args
 model:        
   image_channel: 3
@@ -9,9 +9,8 @@ model:
   image_height: 512
   out_channel_m: 192
   out_channel_n: 128
-  time_dim: 32
-  stage: 2
-  finetune_model_dir: "./saved_model/vaic/0.18"  
+  lamda: 0.0483
+  finetune_model_dir: "./saved_model/jahp/0.18"  
   device: cuda   
 
 # trainning args
@@ -37,4 +36,4 @@ dataset:
 
 logging:
   eval_interval: 100    
-  save_dir: "./saved_model/vaic/vaic_qeevrf"   
+  save_dir: "./saved_model/jahp"   

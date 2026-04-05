@@ -247,7 +247,7 @@ class ETICN(ModelCompressionBase):
     #     else:
     #         super().load_pretrained(save_model_dir, lamda)
 
-class VAIC(ModelCompressionBase):
+class JAHP(ModelCompressionBase):
     def __init__(self, image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda = None, finetune_model_dir = None, device = "cuda"):
         super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
         self.N = out_channel_n
@@ -379,9 +379,6 @@ class ELIC(ModelCompressionBase):
             self.M, 2 * self.M, kernel_size=5, padding=2, stride=1
         )
         
-        # self.channel_context = ChannelContext(
-        #    out_channel_m =  out_channel_m, d_model = (int)(self.image_height/16) * (int)(self.image_weight/16)
-        # )
         self.channel_context = ChannelContext2(
            d_model = out_channel_m
         )
@@ -411,10 +408,8 @@ class ELIC(ModelCompressionBase):
                 "lamda": self.lamda
             }
         return output
-        
-        
-        
-class GRIC(ModelCompressionBase):
+          
+class MLIC(ModelCompressionBase):
     def __init__(
         self,
         image_channel,

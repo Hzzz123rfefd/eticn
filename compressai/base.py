@@ -399,7 +399,7 @@ class ModelQVRFBase(ModelVariableBitRateCompressionBase):
         else:
             torch.save(self.state_dict(), save_model_dir + "stage" + int(stage) + "/model.pth")
         
-class ModelCQVRBase(ModelQVRFBase):        
+class ModelQEEVRFBase(ModelQVRFBase):        
     def __init__(
         self,
         image_channel,
@@ -468,7 +468,7 @@ class ModelCQVRBase(ModelQVRFBase):
             output["total_loss"] = output["total_loss"] + output["noisy_loss"]
         return output
 
-class ModelVGVRFBase(ModelVariableBitRateCompressionBase):
+class ModelAGVAEBase(ModelVariableBitRateCompressionBase):
     def __init__(
         self,
         image_channel,

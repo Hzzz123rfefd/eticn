@@ -1,7 +1,7 @@
 # config.yml
 
 model_type:
-  vaicmsd
+  jahp
 # mdoel args
 model:        
   image_channel: 3
@@ -9,13 +9,14 @@ model:
   image_height: 512
   out_channel_m: 192
   out_channel_n: 128
-  finetune_model_dir: "./saved_model/vaic/0.18"  
+  lamda: 0.18
+  finetune_model_dir: null
   device: cuda   
 
 # trainning args
 traininng:
   batch_size: 2               
-  epochs: 100          
+  epochs: 500          
   learning_rate: 0.0001   
   optimizer: Adam              
   weight_decay: 0.0001   
@@ -35,4 +36,4 @@ dataset:
 
 logging:
   eval_interval: 100    
-  save_dir: "./saved_model/vaic/vaic_msd"   
+  save_dir: "./saved_model/jahp"   

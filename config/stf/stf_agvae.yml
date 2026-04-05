@@ -1,16 +1,16 @@
 # config.yml
-
 model_type:
-  vaic
+  stfagvae
 # mdoel args
 model:        
   image_channel: 3
   image_weight: 512
   image_height: 512
+  patch_size: 2
+  embedding_dim: 40
   out_channel_m: 192
   out_channel_n: 128
-  lamda: 0.0483
-  finetune_model_dir: "./saved_model/vaic/0.18"  
+  finetune_model_dir: "./saved_model/stf/0.18"  
   device: cuda   
 
 # trainning args
@@ -19,10 +19,10 @@ traininng:
   epochs: 100          
   learning_rate: 0.0001   
   optimizer: Adam              
-  weight_decay: 0.0001   
+  weight_decay: 0.0001
   clip_max_norm: 0.5
   factor: 0.3
-  patience: 20         
+  patience: 15         
   device: cuda
 
 dataset_type:
@@ -35,5 +35,5 @@ dataset:
   valid_data_path: datasets/camvid/camvid_train/val.jsonl
 
 logging:
-  eval_interval: 100    
-  save_dir: "./saved_model/vaic"   
+  eval_interval: 100           
+  save_dir: "./saved_model/stf/stf_agvae"   

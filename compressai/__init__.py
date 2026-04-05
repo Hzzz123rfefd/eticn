@@ -1,5 +1,9 @@
-from compressai.model import ETICN, STF, VAIC, GRIC, ELIC, NetA, NetC
-from compressai.model_vbr import VIC_CQVR, VAIC_CQVR, STF_CQVR, GRIC_CQVR, STF_QVRF, VAIC_QVRF, VIC_QVRF, GRIC_QVRF, ETICN_CQVR, ETICN_QVRF, ETICN_VGVRF, ETICN_STVRF, GRIC_VGVRF, GRIC_STVRF, VAIC_STVRF, VAIC_VGVRF, STF_VGVRF, STF_STVRF, VAIC_MSD, STF_MSD, ETICN_MSD
+from compressai.model import ETICN, STF, JAHP, MLIC, ELIC, NetA, NetC
+from compressai.model_vbr import (
+    ETICN_QEEVRF, ETICN_QVRF, ETICN_AGVAE, ETICN_STVRF, ETICN_MSD,
+    STF_QEEVRF, STF_QVRF, STF_AGVAE, STF_STVRF, STF_MSD,
+    JAHP_QEEVRF, JAHP_QVRF, JAHP_AGVAE,JAHP_STVRF, JAHP_MSD,
+)
 from compressai.dataset import DatasetForETICN, DatasetForImageCompression
 
 
@@ -10,40 +14,33 @@ datasets = {
 
 models = {
     "eticn": ETICN,
-    "gric": GRIC,
+    "mlic": MLIC,
     "stf": STF,
-    "vaic": VAIC,
+    "jahp": JAHP,
     "elic": ELIC,
     "neta": NetA,
     "netc": NetC,
     
-    "vaicmsd": VAIC_MSD,
+    "jahpmsd": JAHP_MSD,
     "stfmsd": STF_MSD,
     "eticnmsd": ETICN_MSD,
     
     "eticnqvrf": ETICN_QVRF,
     "stfqvrf": STF_QVRF, 
-    "vicqvrf": VIC_QVRF,
-    "vaicqvrf": VAIC_QVRF,
-    "gricqvrf": GRIC_QVRF,
+    "jahpqvrf": JAHP_QVRF,
     
-    "viccqvr": VIC_CQVR,
-    "vaiccqvr": VAIC_CQVR,
-    "stfcqvr": STF_CQVR,
-    "griccqvr": GRIC_CQVR, 
-    "eticncqvr": ETICN_CQVR,
+    "jahpqeevrf": JAHP_QEEVRF,
+    "stfqeevrf": STF_QEEVRF,
+    "eticnqeevrf": ETICN_QEEVRF,
     
-    "eticnvgvrf": ETICN_VGVRF,
-    "gricvgvrf": GRIC_VGVRF,
-    "stfvgvrf": STF_VGVRF,
-    "vaicvgvrf": VAIC_VGVRF,
+    "eticnagvae": ETICN_AGVAE,
+    "stfagvae": STF_AGVAE,
+    "jahpagvae": JAHP_AGVAE,
     
     "eticnstvrf": ETICN_STVRF, 
-    "gricstvrf": GRIC_STVRF,
     "stfstvrf": STF_STVRF,
-    "vaicstvrf": VAIC_STVRF
+    "jahpstvrf": JAHP_STVRF
 }
-
 
 _entropy_coder = "ans"
 _available_entropy_coders = [_entropy_coder]
