@@ -9,6 +9,10 @@ import torch
 from compressai.utils import *
 from compressai import models
 
+plt.rcParams['pdf.fonttype'] = 42   
+plt.rcParams['ps.fonttype'] = 42
+plt.rcParams['font.family'] = 'Times New Roman'  
+
 def read_image(image_path):
     image = cv2.imread(image_path)
     # h, w, c = image.shape
@@ -68,7 +72,7 @@ def main(args):
     # plt.title("Channel Influence (PSNR)")
     plt.title("通道影响 (PSNR)")
     plt.legend(loc="lower right")
-    plt.savefig(os.path.join(args.save_dir, "result1.png"), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(args.save_dir, "result1.pdf"), bbox_inches='tight')
     plt.show()
     
     psnrs = []
@@ -93,7 +97,7 @@ def main(args):
     # plt.title("Scale Influence (PSNR)")
     plt.title("缩放影响 (PSNR)")
     plt.legend(loc="lower right")
-    plt.savefig(os.path.join(args.save_dir, "result2.png"), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(args.save_dir, "result2.pdf"), bbox_inches='tight')
     plt.show()
 
 if __name__ == "__main__":

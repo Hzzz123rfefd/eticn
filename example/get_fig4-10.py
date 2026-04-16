@@ -6,9 +6,12 @@ from matplotlib import pyplot as plt
 import numpy as np
 import torch
 sys.path.append(os.getcwd())
-
 from compressai import models
 from compressai.utils import load_config
+
+plt.rcParams['pdf.fonttype'] = 42   
+plt.rcParams['ps.fonttype'] = 42
+plt.rcParams['font.family'] = 'Times New Roman'  
 
 def read_image(image_path):
     image = cv2.imread(image_path)
@@ -38,7 +41,7 @@ def plot_heatmap(save_path: str, data: np.ndarray):
 
     plt.tight_layout()
 
-    plt.savefig(save_path, dpi=1200)
+    plt.savefig(save_path, bbox_inches='tight')
     plt.close()
 
 
@@ -80,11 +83,11 @@ def main(args):
     print("MSE2:", mse)
 
     os.makedirs(args.save_dir, exist_ok = True)
-    plot_heatmap(os.path.join(args.save_dir, "y.png"),  y)
-    plot_heatmap(os.path.join(args.save_dir, "y_hat.png"), y_hat)
-    plot_heatmap(os.path.join(args.save_dir, "y_hat2.png"), y_hat2)
-    plot_heatmap(os.path.join(args.save_dir, "y_hat_diff.png"), np.abs(y - y_hat))
-    plot_heatmap(os.path.join(args.save_dir, "y_hat2_diff.png"), np.abs(y - y_hat2))
+    plot_heatmap(os.path.join(args.save_dir, "y.pdf"),  y)
+    plot_heatmap(os.path.join(args.save_dir, "y_hat.pdf"), y_hat)
+    plot_heatmap(os.path.join(args.save_dir, "y_hat2.pdf"), y_hat2)
+    plot_heatmap(os.path.join(args.save_dir, "y_hat_diff.pdf"), np.abs(y - y_hat))
+    plot_heatmap(os.path.join(args.save_dir, "y_hat2_diff.pdf"), np.abs(y - y_hat2))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

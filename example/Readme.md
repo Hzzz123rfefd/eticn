@@ -21,22 +21,22 @@ python train.py --model_config_path config/eticn/eticn_0932.yml
 
 ### 1.2 **mlic系列模型训练**
 
-- **gric基座模型:** `python train.py --model_config_path config/gric/gric.yml`
+- **gric基座模型:** `python train.py --model_config_path config/mlic/mlic.yml`
 - **gric**
 
 ```bash
-python train.py --model_config_path config/gric/gric_013.yml
-python train.py --model_config_path config/gric/gric_0018.yml
-python train.py --model_config_path config/gric/gric_025.yml
-python train.py --model_config_path config/gric/gric_0067.yml
-python train.py --model_config_path config/gric/gric_0483.yml
-python train.py --model_config_path config/gric/gric_0932.yml
+python train.py --model_config_path config/mlic/mlic_013.yml
+python train.py --model_config_path config/mlic/mlic_0018.yml
+python train.py --model_config_path config/mlic/mlic_025.yml
+python train.py --model_config_path config/mlic/mlic_0067.yml
+python train.py --model_config_path config/mlic/mlic_0483.yml
+python train.py --model_config_path config/mlic/mlic_0932.yml
 ```
 
-- **gric-qeevrf:** ``` python train.py --model_config_path config/gric/gric_qeevrf_stage2.yml & python train.py --model_config_path config/gric/gric_qeevrf_stage3.yml ```
-- **gric-qvrf:** ``` python train.py --model_config_path config/gric/gric_qvrf.yml ```
-- **gric-vgvrf:** ``` python train.py --model_config_path config/gric/gric_vgvrf.yml ```
-- **gric-stvrf:** ``` python train.py --model_config_path config/gric/gric_stvrf.yml ```
+- **gric-qeevrf:** ``` python train.py --model_config_path config/mlic/mlic_qeevrf_stage2.yml & python train.py --model_config_path config/mlic/mlic_qeevrf_stage3.yml ```
+- **gric-qvrf:** ``` python train.py --model_config_path config/mlic/mlic_mlic.yml ```
+- **gric-vgvrf:** ``` python train.py --model_config_path mlic/mlic/mlic_vgvrf.yml ```
+- **gric-stvrf:** ``` python train.py --model_config_path config/mlic/mlic_stvrf.yml ```
 
 ### **1.3 stf系列模型训练**
 
@@ -58,25 +58,25 @@ python train.py --model_config_path config/stf/stf_0932.yml
 - **stf-stvrf:** ``` python train.py --model_config_path config/stf/stf_stvrf.yml ```
 - **stf-msd:** ``` python train.py --model_config_path config/stf/stf_msd.yml ```
 
-### **1.4 vaic系列模型训练**
+### **1.4 jahp系列模型训练**
 
-- **vaic基座模型:** `python train.py --model_config_path config/vaic/vaic.yml`
-- **vaic**
+- **jahp基座模型:** `python train.py --model_config_path config/jahp/jahp.yml`
+- **jahp**
 
 ```bash
-python train.py --model_config_path config/vaic/vaic_013.yml
-python train.py --model_config_path config/vaic/vaic_0018.yml
-python train.py --model_config_path config/vaic/vaic_025.yml
-python train.py --model_config_path config/vaic/vaic_0067.yml
-python train.py --model_config_path config/vaic/vaic_0483.yml
-python train.py --model_config_path config/vaic/vaic_0932.yml
+python train.py --model_config_path config/jahp/jahp_013.yml
+python train.py --model_config_path config/jahp/jahp_0018.yml
+python train.py --model_config_path config/jahp/jahp_025.yml
+python train.py --model_config_path config/jahp/jahp_0067.yml
+python train.py --model_config_path config/jahp/jahp_0483.yml
+python train.py --model_config_path config/jahp/jahp_0932.yml
 ```
 
-- vaic-qeevrf: ``` python train.py --model_config_path config/vaic/vaic_qeevrf_stage2.yml & python train.py --model_config_path config/vaic/vaic_qeevrf_stage3.yml ```
-- vaic-qvrf:``` python train.py --model_config_path config/vaic/vaic_qvrf.yml ```
-- vaic-stvrf: ``` python train.py --model_config_path config/vaic/vaic_stvrf.yml ```
-- vaic-vgvrf: ``` python train.py --model_config_path config/vaic/vaic_vgvrf.yml ```
-- vaic-msd: ``` python train.py --model_config_path config/vaic/vaic_msd.yml ```
+- jahp-qeevrf: ``` python train.py --model_config_path config/jahp/jahp_qeevrf_stage2.yml & python train.py --model_config_path config/jahp/jahp_qeevrf_stage3.yml ```
+- jahp-qvrf:``` python train.py --model_config_path config/jahp/jahp_qvrf.yml ```
+- jahp-stvrf: ``` python train.py --model_config_path config/jahp/jahp_stvrf.yml ```
+- jahp-vgvrf: ``` python train.py --model_config_path config/jahp/jahp_vgvrf.yml ```
+- jahp-msd: ``` python train.py --model_config_path config/jahp/jahp_msd.yml ```
 
 ### **1.5 elic系列模型训练**
 
@@ -160,7 +160,6 @@ python train.py --model_config_path config/elic/elic_0932.yml
 **agvae**：```python example/eval_vbr.py --model_config_path config/jahp/jahp_agvae.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/jahp/jahp_agvae/ --save_path result/R-D/vbr/camvid/jahp/[VG-VAE].json```
 **stanh**：```python example/eval_vbr.py --model_config_path config/jahp/jahp_stvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/jahp/jahp_stvrf/ --save_path result/R-D/vbr/camvid/jahp/[STANH].json```
 **msd**：```python example/eval_vbr.py --model_config_path config/jahp/jahp_msd.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/jahp/jahp_msd/ --save_path result/R-D/vbr/camvid/jahp/[MSD].json```
-
 - BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/camvid/jahp/ --base_result_file Baseline[JA-HP].json```
 - RD曲线：```python example/plot_R_D_curve.py --dir_path result/R-D/vbr/camvid/jahp/```
 
@@ -168,20 +167,20 @@ python train.py --model_config_path config/elic/elic_0932.yml
 
 ##### 2.2.2.1 soda
 
-* **qeevrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qeevrf_stage3.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_qeevrf/stage3 --save_path result/R-D/vbr/soda/eticn/[Ours].json```
-* **qvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qvrf.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_qvrf/stage2 --save_path result/R-D/vbr/soda/eticn/[Tong(NIPS2023)].json```
-* **vgvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_vgvrf.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_vgvrf/ --save_path result/R-D/vbr/soda/eticn/[Cai(CVPR2022)].json```
-* **stvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_stvrf.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_stvrf/ --save_path result/R-D/vbr/soda/eticn/[Presta(TIP2025)].json```
+* **qeevrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qeevrf_stage3.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_qeevrf/stage3 --save_path result/R-D/vbr/soda/eticn/[QEEVRM].json```
+* **qvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qvrf.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_qvrf/stage2 --save_path result/R-D/vbr/soda/eticn/[QVRF].json```
+* **agvae**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_agvae.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_agvae/ --save_path result/R-D/vbr/soda/eticn/[AG-VAE].json```
+* **stvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_stvrf.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_stvrf/ --save_path result/R-D/vbr/soda/eticn/[STANH].json```
 * **msd**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_msd.yml --data_path datasets/soda/soda_train/val.jsonl --model_path saved_model/eticn/eticn_msd/ --save_path result/R-D/vbr/soda/eticn/[MSD].json```
 * BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/soda/eticn --base_result_file Foundation[ETICM].json```
 * RD结果：```python example/plot_R_D_curve.py --dir_path result/R-D/vbr/soda/eticn```
 
 ##### 2.2.2.2 srti
 
-* **qeevrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qeevrf_stage3.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_qeevrf/stage3 --save_path result/R-D/vbr/srti/eticn/[Ours].json```
-* **qvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qvrf.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_qvrf/stage2 --save_path result/R-D/vbr/srti/eticn/[Tong(NIPS2023)].json```
-* **vgvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_vgvrf.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_vgvrf/ --save_path result/R-D/vbr/srti/eticn/[Cai(CVPR2022)].json```
-* **stvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_stvrf.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_stvrf/ --save_path result/R-D/vbr/srti/eticn/[Presta(TIP2025)].json```
+* **qeevrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qeevrf_stage3.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_qeevrf/stage3 --save_path result/R-D/vbr/srti/eticn/[QEEVRM].json```
+* **qvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qvrf.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_qvrf/stage2 --save_path result/R-D/vbr/srti/eticn/[QVRF].json```
+* **agvae**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_agvae.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_agvae/ --save_path result/R-D/vbr/srti/eticn/[AG-VAE].json```
+* **stvrf**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_stvrf.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_stvrf/ --save_path result/R-D/vbr/srti/eticn/[STANH].json```
 * **msd**：```python example/eval_vbr.py --model_config_path config/eticn/eticn_msd.yml --data_path datasets/srti/srti_train/val.jsonl --model_path saved_model/eticn/eticn_msd/ --save_path result/R-D/vbr/srti/eticn/[MSD].json```
 * BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/srti/eticn --base_result_file Foundation[ETICM].json```
 * RD结果：```python example/plot_R_D_curve.py --dir_path result/R-D/vbr/srti/eticn/```
@@ -189,41 +188,33 @@ python train.py --model_config_path config/elic/elic_0932.yml
 ### 2.3 消融实验
 
 #### 2.3.1 消融1
-* eticn: ```python example/eval.py --model_config_path config/eticn/eticn.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/ --save_path result/R-D/fbr/ablation/e1/ETICN.json```
-* neta：```python example/eval.py --model_config_path config/neta/neta_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/neta/ --save_path result/R-D/fbr/ablation/e1/NET-A.json```
-* netb：```python example/eval.py --model_config_path config/stf/stf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/stf/ --save_path result/R-D/fbr/ablation/e1/NET-B.json```
-* netc：```python example/eval.py --model_config_path config/netc/netc_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/netc/ --save_path result/R-D/fbr/ablation/e1/NET-C.json```
+* eticn: ```python example/eval.py --model_config_path config/eticn/eticn.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/ --save_path result/R-D/fbr/ablation/e1/[ETICM].json```
+* neta：```python example/eval.py --model_config_path config/ablation/one/neta/neta_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/neta/ --save_path result/R-D/fbr/ablation/e1/[NET-A].json```
+* netb：```python example/eval.py --model_config_path config/ablation/one/netb/netb_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/netb/ --save_path result/R-D/fbr/ablation/e1/[NET-B].json```
+* netc：```python example/eval.py --model_config_path config/ablation/one/netc/netc_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/netc/ --save_path result/R-D/fbr/ablation/e1/[NET-C].json```
 * R-D曲线：```python example/plot_R_D_curve.py --dir_path result/R-D/fbr/ablation/e1/```
-* BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/fbr/ablation/e1/ --base_result_file NET-C.json```
+* BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/fbr/ablation/e1/ --base_result_file [NET-C].json```
 
 #### 2.3.2 消融2
 ##### 2.3.2.1 G = 32
 
-* **G = 32, C = 256**：```python example/eval.py --model_config_path config/ablation/eticn_256_32/eticn_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn_256_32/ --save_path result/R-D/fbr/ablation/e2/G=32/C=256.json```
-* **G = 32, C = 512**：```python example/eval.py --model_config_path config/ablation/eticn_512_32/eticn_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn_512_32/ --save_path result/R-D/fbr/ablation/e2/G=32/C=512.json```
-* **G = 32, C = 1024**：```python example/eval.py --model_config_path config/ablation/eticn_1024_32/eticn_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn_1024_32/ --save_path result/R-D/fbr/ablation/e2/G=32/C=1024.json```
+* **G = 32, C = 256**：```python example/eval.py --model_config_path config/ablation/two/eticn_256_32/eticn_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn_256_32/ --save_path result/R-D/fbr/ablation/e2/G=32/C=256.json```
+* **G = 32, C = 512**：```python example/eval.py --model_config_path config/ablation/two/eticn_512_32/eticn_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn_512_32/ --save_path result/R-D/fbr/ablation/e2/G=32/C=512.json```
+* **G = 32, C = 1024**：```python example/eval.py --model_config_path config/ablation/two/eticn_1024_32/eticn_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn_1024_32/ --save_path result/R-D/fbr/ablation/e2/G=32/C=1024.json```
 * **R-D曲线**：```python example/plot_R_D_curve.py --dir_path result/R-D/fbr/ablation/e2/G=32/```
-* **BD结果**：```python example/get_bp_psnr_rate.py --dir_path result/R-D/fbr/ablation/e2/G=32/ --base_result_file Dim=256.json```
+* **BD结果**：```python example/get_bp_psnr_rate.py --dir_path result/R-D/fbr/ablation/e2/G=32/ --base_result_file G=256.json```
 
 ##### 2.3.2.2 C = 512
-* **G = 16, C = 512**：```python example/eval.py --model_config_path config/ablation/eticn_512_16/eticn_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn_512_16/ --save_path result/R-D/fbr/ablation/e2/C=512/G=16.json```
-* **G = 32, C = 512**：```python example/eval.py --model_config_path config/ablation/eticn_512_32/eticn_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn_512_32/ --save_path result/R-D/fbr/ablation/e2/C=512/G=32.json```
+* **G = 16, C = 512**：```python example/eval.py --model_config_path config/ablation/two/eticn_512_16/eticn_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn_512_16/ --save_path result/R-D/fbr/ablation/e2/C=512/G=16.json```
+* **G = 32, C = 512**：```python example/eval.py --model_config_path config/ablation/two/eticn_512_32/eticn_0018.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn_512_32/ --save_path result/R-D/fbr/ablation/e2/C=512/G=32.json```
+* **G = 64, C = 512**: `python example/eval.py --model_config_path config/eticn/eticn.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/ --save_path result/R-D/fbr/ablation/e2/C=512/G=64.json`
 * **R-D曲线**：```python example/plot_R_D_curve.py --dir_path result/R-D/fbr/ablation/e2/C=512/```
-* **BD结果**：```python example/get_bp_psnr_rate.py --dir_path result/R-D/fbr/ablation/e2/C=512/ --base_result_file Group=16.json```
+* **BD结果**：```python example/get_bp_psnr_rate.py --dir_path result/R-D/fbr/ablation/e2/C=512/ --base_result_file G=16.json```
 
 #### 2.3.3 消融3
-* qeevrf:```python example/eval_vbr.py --model_config_path config/eticn/eticn_qeevrf_stage3.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/eticn_qeevrf/stage3 --save_path result/R-D/vbr/ablation/QEEVRF.json```
-* neta：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qeevrf_stage2.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/eticn_qeevrf/stage2 --save_path result/R-D/vbr/ablation/NET-A.json```
-* netb:```python example/eval_vbr.py --model_config_path config/eticn/eticn_qvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/eticn_qvrf/stage2 --save_path result/R-D/vbr/ablation/NET-B.json```
+* qeevrf:```python example/eval_vbr.py --model_config_path config/eticn/eticn_qeevrf_stage3.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/eticn_qeevrf/stage3 --save_path result/R-D/vbr/ablation/[QEEVRF].json```
+* neta：```python example/eval_vbr.py --model_config_path config/eticn/eticn_qeevrf_stage2.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/eticn_qeevrf/stage2 --save_path result/R-D/vbr/ablation/[NET-A].json```
+* netb:```python example/eval_vbr.py --model_config_path config/eticn/eticn_qvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/eticn/eticn_qvrf/stage2 --save_path result/R-D/vbr/ablation/[NET-B].json```
 * R-D曲线：```python example/plot_R_D_curve.py --dir_path result/R-D/vbr/ablation/```
-* BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/ablation/ --base_result_file NET-B.json```
-
-
-
-
-
-* neta：```python example/eval_vbr.py --model_config_path config/stf/stf_qeevrf_stage2.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/stf/stf_qeevrf/stage2 --save_path result/R-D/vbr/ablation/NET-A.json```
-* netb:```python example/eval_vbr.py --model_config_path config/stf/stf_qvrf.yml --data_path datasets/camvid/camvid_train/val.jsonl --model_path saved_model/stf/stf_qvrf/stage2 --save_path result/R-D/vbr/ablation/NET-B.json``
-
-
+* BD结果：```python example/get_bp_psnr_rate.py --dir_path result/R-D/vbr/ablation/ --base_result_file [NET-B].json```
 

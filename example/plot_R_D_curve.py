@@ -4,7 +4,12 @@ import os
 import matplotlib.pyplot as plt
 import sys
 import os
+from matplotlib.ticker import FormatStrFormatter
 sys.path.append(os.getcwd())
+
+plt.rcParams['pdf.fonttype'] = 42   
+plt.rcParams['ps.fonttype'] = 42
+plt.rcParams['font.family'] = 'Times New Roman'  
 
 def R_D_SSIM(bpp_lists, msssim_lists, models):
     plt.rcParams.update({
@@ -20,12 +25,12 @@ def R_D_SSIM(bpp_lists, msssim_lists, models):
     # ================== 虚线方法定义 ==================
     dashed_models = {
         "BPG", "JEPG2000", "VVC",
-        "[BPG]", "[JEPG2000]", "[VVC]", "[ETICN]"
+        "[BPG]", "[JEPG2000]", "[VVC]"
     }
     # ================== 基座方法定义 ==================
     base_models = {
         "Baseline[Minnen(NIPS2018)]", "Baseline[Zou(CVPR2022)]", "Baseline[Yang(NIPS2024)]", "Baseline[ETICN]", "Foundation[JA-HP]",
-        "Foundation[STF]", "Foundation[ETICM]"
+        "Foundation[STF]", "Foundation[ETICM]",  "Foundation[SM-FTC]"
     }
 
     # ================== 绘图并保存句柄 ==================
@@ -45,10 +50,11 @@ def R_D_SSIM(bpp_lists, msssim_lists, models):
 
     plt.xlabel('bpp')
     plt.ylabel('MS-SSIM')
+    plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     plt.grid(True)
 
     # ================== 固定前排（自动判断是否存在） ==================
-    proposed_name = "[QEEVRM]"
+    proposed_name = "[SM-FTC]"
     baseline_name = "Baseline [Qian (ICLR2022)]"
 
     fixed_front = []
@@ -81,7 +87,7 @@ def R_D_SSIM(bpp_lists, msssim_lists, models):
         frameon=True
     )
 
-    plt.savefig(args.dir_path + "/bpp_ssim.png", dpi = 700)
+    plt.savefig(os.path.join(args.dir_path, "bpp_ssim.pdf"), bbox_inches='tight')
     plt.show()
 
 def R_D_PSNR(bpp_lists, psnr_lists, models):
@@ -98,12 +104,12 @@ def R_D_PSNR(bpp_lists, psnr_lists, models):
     # ================== 虚线方法定义 ==================
     dashed_models = {
         "BPG", "JEPG2000", "VVC",
-        "[BPG]", "[JEPG2000]", "[VVC]", "[ETICN]"
+        "[BPG]", "[JEPG2000]", "[VVC]"
     }
     # ================== 基座方法定义 ==================
     base_models = {
         "Baseline[Minnen(NIPS2018)]", "Baseline[Zou(CVPR2022)]", "Baseline[Yang(NIPS2024)]", "Baseline[ETICN]", "Foundation[JA-HP]",
-        "Foundation[STF]", "Foundation[ETICM]"
+        "Foundation[STF]", "Foundation[ETICM]",  "Foundation[SM-FTC]"
     }
 
     # ================== 绘图并保存句柄 ==================
@@ -126,7 +132,7 @@ def R_D_PSNR(bpp_lists, psnr_lists, models):
     plt.grid(True)
 
     # ================== 固定前排（自动判断是否存在） ==================
-    proposed_name = "[QEEVRM]"
+    proposed_name = "[SM-FTC]"
     baseline_name = "Baseline [Qian (ICLR2022)]"
 
     fixed_front = []
@@ -162,7 +168,7 @@ def R_D_PSNR(bpp_lists, psnr_lists, models):
     )
 
     
-    plt.savefig(args.dir_path + "/bpp_psnr.png", dpi = 700)
+    plt.savefig(os.path.join(args.dir_path, "bpp_psnr.pdf"), bbox_inches='tight')
     plt.show()
 
 

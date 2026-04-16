@@ -675,7 +675,75 @@ class NetC(ModelCompressionBase):
         }
         return output
 
-class NetA(STF):
+class NetB(ModelCompressionBase):
+    def __init__(self, image_channel, image_height, image_weight, patch_size, embedding_dim,out_channel_m, out_channel_n, lamda, finetune_model_dir, device):
+        super().__init__(image_channel, image_height, image_weight, out_channel_m, out_channel_n, lamda, finetune_model_dir, device)
+        self.patch_size = patch_size
+        self.embed_dim = embedding_dim
+        self.feather_shape = [embedding_dim*8,
+                                            (int)(self.image_shape[1]/patch_size/8),
+                                            (int)(self.image_shape[2]/patch_size/8)]
+        self.image_transform_encoder = Encoder(image_shape = self.image_shape,
+                                                                            patch_size = patch_size,
+                                                                            embed_dim = embedding_dim,
+                                                                            window_size = 4,
+                                                                            head_num = 1,
+                                                                            shift_size = 0,
+                                                                            out_channel_m= out_channel_m
+                                                            )
+        self.image_transform_decoder = Decoder(image_shape = self.image_shape,
+                                                                            patch_size = patch_size,
+                                                                            embed_dim = embedding_dim,
+                                                                            window_size = 4,
+                                                                            head_num = 1,
+                                                                            shift_size = 0,
+                                                                            out_channel_m= out_channel_m
+                                                            )
+        self.hyperpriori_encoder = HyperprioriEncoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
+                                                                                    out_channel_m = out_channel_m,
+                                                                                    out_channel_n = out_channel_n)
+        self.hyperpriori_decoder = HyperprioriDecoder(feather_shape = [out_channel_m,(int)(self.image_shape[1]/16),(int)(self.image_shape[2]/16)],
+                                                                                    out_channel_m = out_channel_m,
+                                                                                    out_channel_n = out_channel_n)
+        self.entropy_bottleneck = EntropyBottleneck(out_channel_n)
+        self.gaussian_conditional = GaussianConditional(None)
+        self.entropy_parameters = nn.Sequential(
+            nn.Conv2d(self.out_channel_m * 12 // 4, self.out_channel_m * 10 // 3, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(self.out_channel_m * 10 // 3, self.out_channel_m * 8 // 3, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(self.out_channel_m * 8 // 3, self.out_channel_m * 6 // 3, 1),
+        )
+
+        self.context_prediction = MaskedConv2d(
+            self.out_channel_m, 2 * self.out_channel_m, kernel_size=5, padding=2, stride=1
+        )
+        
+    def forward(self,inputs):
+        image = inputs["image"].to(self.device)
+        y,  _ = self.image_transform_encoder(image)
+        z = self.hyperpriori_encoder(y)
+        z_hat, z_likelihoods = self.entropy_bottleneck(z)
+        params = self.hyperpriori_decoder(z_hat)
+        y_hat = self.gaussian_conditional.quantize(y , "noise" if self.training else "dequantize") 
+        ctx_params = self.context_prediction(y_hat)
+        gaussian_params = self.entropy_parameters(
+            torch.cat((params, ctx_params), dim=1)
+        )
+        scales_hat, means_hat = gaussian_params.chunk(2, 1)
+        _, y_likelihoods = self.gaussian_conditional(y , scales_hat, means_hat)
+        """ reverse transformation """
+        x_hat = self.image_transform_decoder(y_hat)
+        x_hat = torch.clamp(x_hat, 0, 1)
+        output = {
+            "image":inputs["image"].to(self.device),
+            "reconstruction_image":x_hat,
+            "likelihoods": {"y": y_likelihoods, "z": z_likelihoods},
+            "lamda":self.lamda
+        }
+        return output
+
+class NetA(NetB):
     def __init__(
         self, image_channel, image_height, image_weight, patch_size, embedding_dim,out_channel_m, out_channel_n,
         transfomer_head,

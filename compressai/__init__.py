@@ -1,4 +1,4 @@
-from compressai.model import ETICN, STF, JAHP, MLIC, ELIC, NetA, NetC
+from compressai.model import ETICN, STF, JAHP, MLIC, ELIC, NetA, NetB, NetC
 from compressai.model_vbr import (
     ETICN_QEEVRF, ETICN_QVRF, ETICN_AGVAE, ETICN_STVRF, ETICN_MSD,
     STF_QEEVRF, STF_QVRF, STF_AGVAE, STF_STVRF, STF_MSD,
@@ -19,6 +19,7 @@ models = {
     "jahp": JAHP,
     "elic": ELIC,
     "neta": NetA,
+    "netb": NetB,
     "netc": NetC,
     
     "jahpmsd": JAHP_MSD,

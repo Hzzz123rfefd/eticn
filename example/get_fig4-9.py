@@ -9,6 +9,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # 设置格式
+plt.rcParams['pdf.fonttype'] = 42   
+plt.rcParams['ps.fonttype'] = 42
+plt.rcParams['font.family'] = 'Times New Roman'  
 plt.rcParams.update({
 'font.family': ['Times New Roman', 'SimSun'],
 'axes.unicode_minus': False,                 
@@ -48,7 +51,7 @@ def plot_all_result(x, y):
     for spine in ax.spines.values():
         spine.set_linewidth(2)
     plt.tight_layout()
-    plt.savefig(os.path.join(args.save_dir, "result1.png"), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(args.save_dir, "result1.pdf"), bbox_inches='tight')
     plt.show()
     plt.close()
 
@@ -105,7 +108,7 @@ def plot_example(x0, x1, x2, y):
     for spine in ax.spines.values():
         spine.set_linewidth(2)
     plt.tight_layout()
-    plt.savefig(os.path.join(args.save_dir, "result2.png"), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(args.save_dir, "result2.pdf"), bbox_inches='tight')
     plt.show()
     plt.close()
      

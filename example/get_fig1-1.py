@@ -2,11 +2,14 @@ import argparse
 import os
 import matplotlib.pyplot as plt
 
+plt.rcParams['pdf.fonttype'] = 42   
+plt.rcParams['ps.fonttype'] = 42
+plt.rcParams['font.family'] = 'Times New Roman'  
 
 def main(args):
     os.makedirs(args.save_dir, exist_ok = True)
-    years = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032]
-    market_size = [7.9, 8.4, 9.0, 9.6, 10.3, 11.1, 12.0, 13.0, 14.0, 15.0]
+    years = [2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035]
+    market_size = [16.46, 18.94, 21.80, 25.09, 28.85, 33.18, 38.18, 43.91, 50.56, 58.27, 67.18]
 
     plt.rcParams.update({
     'font.family': ['Times New Roman', 'SimSun'],
@@ -42,7 +45,7 @@ def main(args):
     plt.xticks(years, rotation=45)
     plt.tight_layout()
 
-    plt.savefig(os.path.join(args.save_dir, "fig1-1.png"), dpi=300)
+    plt.savefig(os.path.join(args.save_dir, "fig1-1.pdf"), bbox_inches='tight')
     plt.show()
 
 

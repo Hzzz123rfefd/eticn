@@ -6,9 +6,12 @@ from matplotlib import pyplot as plt
 import numpy as np
 import torch
 sys.path.append(os.getcwd())
-
 from compressai import models
 from compressai.utils import load_config
+
+plt.rcParams['pdf.fonttype'] = 42   
+plt.rcParams['ps.fonttype'] = 42
+plt.rcParams['font.family'] = 'Times New Roman'  
 
 def read_image(image_path):
     image = cv2.imread(image_path)

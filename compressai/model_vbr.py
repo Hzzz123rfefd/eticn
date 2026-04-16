@@ -1684,7 +1684,7 @@ class JAHP_STVRF(ModelSTanhVRFBase):
             torch.cat((params, ctx_params), dim=1)
         )
         scales_hat, means_hat = gaussian_params.chunk(2, 1)
-        _, y_likelihoods = self.gaussian_conditional(y * w + b, means_hat * w + b, scales_hat * w + b)
+        _, y_likelihoods = self.gaussian_conditional(y * w + b - means_hat * w + b, scales_hat * w + b)
         x_hat = self.g_s(y_hat)
         x_hat = torch.clamp(x_hat, 0, 1)
         output = {
